@@ -2,7 +2,7 @@ using Godot;
 
 namespace LastEmber;
 
-public readonly record struct DamageInfo(float Amount, Vector2 Origin, float Knockback = 110, bool Burn = false, bool IsBurnTick = false);
+public readonly record struct DamageInfo(float Amount, Vector2 Origin, float Knockback = 110, bool Burn = false, bool IsBurnTick = false, bool Strike = false);
 
 public interface IDamageable
 {

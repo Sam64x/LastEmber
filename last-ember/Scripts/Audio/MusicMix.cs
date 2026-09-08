@@ -5,7 +5,7 @@ namespace LastEmber;
 
 public enum MusicCue { Menu, Streets, Offering, Boss, Victory, Silence }
 public enum MusicLayer { Ambient, Melody, Strings, Percussion, Bass, Choir, Tension, Heartbeat, Breath, Fire, Fragments, Hope, Count }
-public readonly record struct MusicFrame(MusicCue Cue, float Flame, float Danger, int LitTorches=4, float BossHealth=1, float HopeSeconds=0, bool Elite=false);
+public readonly record struct MusicFrame(MusicCue Cue, float Flame, float Danger, int LitTorches=4, float BossHealth=1, float HopeSeconds=0, bool Elite=false, bool LastEmber=false);
 
 // Pure mix policy, separate from playback. Gains are linear; fades happen in the director.
 public static class MusicMix
@@ -27,6 +27,14 @@ public static class MusicMix
         {
             gains[(int)MusicLayer.Ambient]=.30f;gains[(int)MusicLayer.Melody]=.94f;
             gains[(int)MusicLayer.Strings]=.52f;gains[(int)MusicLayer.Choir]=.30f;gains[(int)MusicLayer.Fire]=.38f;
+            return;
+        }
+        if(state.LastEmber)
+        {
+            gains[(int)MusicLayer.Ambient]=.018f;
+            gains[(int)MusicLayer.Heartbeat]=.62f;
+            gains[(int)MusicLayer.Breath]=.40f;
+            gains[(int)MusicLayer.Fire]=.025f;
             return;
         }
         float life=S(.045f,.48f,flame),warmth=S(.36f,.9f,flame),critical=1-S(.07f,.30f,flame);

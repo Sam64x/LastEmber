@@ -38,13 +38,16 @@ public partial class Hud : CanvasLayer
     {
         if(Run.State==RunState.Menu)return;
         var player=Run.Player;if(!GodotObject.IsInstanceValid(player))return;
-        _flame.Text=$"FLAME   {Mathf.CeilToInt(player.Flame.Current)} / {player.Flame.Maximum:0}";
-        _flame.Modulate=player.Flame.Ratio<.3f?new Color(1,.43f,.29f):Colors.White;
+        bool blue=player.Flame.LastEmber;
+        _flame.Text=$"{(blue?"LAST EMBER":"FLAME")}   {Mathf.CeilToInt(player.Flame.Current)} / {player.Flame.Maximum:0}";
+        _flame.Modulate=blue?new Color(.3f,.75f,1):player.Flame.Ratio<.3f?new Color(1,.43f,.29f):Colors.White;
+        if(_flameBar.GetThemeStylebox("fill") is StyleBoxFlat flameStyle)flameStyle.BgColor=blue?new Color(.25f,.7f,1):Amber;
         _flameBar.Value=player.Flame.Ratio*100;
         _room.Text=$"{Run.StageIndex+1:00} / 10   ·   {Run.CurrentStage.ToString().ToUpperInvariant()}\n{Run.Kills} FALLEN     {TimeText(Run.RunTime)}";
         _dash.Text=player.DashCooldown<=0?"SPACE   DASH READY":$"SPACE   {player.DashCooldown:0.0}s";
         _dashBar.Value=(1-player.DashCooldown)*100;
-        _reveal.Text=$"Q   REVEAL  −{player.RevealCost:0}\n"+(player.RevealCooldown<=0?"LIGHT THE DARK":$"RECHARGING  {player.RevealCooldown:0.0}s");
+        _reveal.Text=(blue?"Q   BLUE PULSE • FREE":$"Q   REVEAL  −{player.RevealCost:0}")+"\n"+(player.RevealCooldown<=0?(blue?"+40% DAMAGE • STAY ALIVE":"LIGHT THE DARK"):$"RECHARGING  {player.RevealCooldown:0.0}s");
+        _reveal.Modulate=blue?new Color(.35f,.8f,1):Colors.White;
         string relics="";foreach(var artifact in player.Build.Artifacts)relics+=(relics.Length>0?"  /  ":"")+artifact.DisplayName;
         _relics.Text=$"RELICS  {player.Build.Artifacts.Count:00}"+(player.Build.AltarUsed?"    •    SACRIFICE BOUND":"")+"\n"+(relics.Length==0?"Carry a little light into the dark.":relics);
         Extinguisher? boss=null;foreach(var enemy in Run.Enemies)if(enemy is Extinguisher found)boss=found;

@@ -34,6 +34,7 @@ public partial class RunManager : Node
     private readonly RandomNumberGenerator _rng = new();
     private readonly List<FirePatch> _fires = new();
     private float _shake, _clearDelay, _waveDelay;
+    private float _hitStop;
     private int _wavesRemaining;
     private bool _stageResolved, _roomRewardTaken;
     private sealed class FirePatch { public Vector2 Position; public float Life=1.3f, Tick; }
@@ -78,6 +79,7 @@ public partial class RunManager : Node
     }
     private void NewWorld()
     {
+        _hitStop=0;
         if(IsInstanceValid(_world)) { RemoveChild(_world); _world.QueueFree(); }
         Enemies.Clear();Lights.Clear();_fires.Clear();
         _world = new Node2D { ProcessMode = ProcessModeEnum.Pausable }; AddChild(_world); MoveChild(_world,0);
@@ -146,6 +148,12 @@ public partial class RunManager : Node
     }
     public override void _Process(double delta)
     {
+        if(_hitStop>0)
+        {
+            _hitStop=Mathf.Max(0,_hitStop-(float)delta);
+            if(_hitStop<=0&&IsInstanceValid(_world))_world.ProcessMode=ProcessModeEnum.Pausable;
+            return;
+        }
         if(!Playing)return;
         float dt=(float)delta;RunTime+=dt;
         _shake=Mathf.MoveToward(_shake,0,dt*24);
@@ -158,8 +166,8 @@ public partial class RunManager : Node
             if(fire.Life<=0){_fires.RemoveAt(i);continue;}
             if(fire.Tick<=0)
             {
-                fire.Tick=.3f;Fx.Sparks(fire.Position,new Color(1,.45f,.1f),2);
-                foreach(var enemy in Enemies.ToArray()) if(!enemy.Dead&&enemy.Position.DistanceTo(fire.Position)<42) enemy.TakeDamage(new DamageInfo(4,fire.Position,0,true));
+                fire.Tick=.3f;Fx.Sparks(fire.Position,FlamePalette.Fire(Player.Flame.LastEmber),2);
+                foreach(var enemy in Enemies.ToArray()) if(!enemy.Dead&&enemy.Position.DistanceTo(fire.Position)<42) enemy.TakeDamage(new DamageInfo(4*Player.Flame.LastEmberDamageMultiplier,fire.Position,0,true));
             }
         }
         if(!_stageResolved && CurrentStage!=StageKind.Altar && Enemies.Count==0)
@@ -188,9 +196,9 @@ public partial class RunManager : Node
         =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage});
     public void Explode(Vector2 origin,float radius,float damage,bool burn)
     {
-        Fx.Ring(origin,radius,new Color(1,.58f,.19f));Fx.Sparks(origin,new Color(1,.5f,.1f),24);
+        Fx.Ring(origin,radius,FlamePalette.Fire(Player.Flame.LastEmber));Fx.Sparks(origin,FlamePalette.Fire(Player.Flame.LastEmber),24);
         foreach(var enemy in Enemies.ToArray())
-            if(!enemy.Dead&&enemy.Position.DistanceTo(origin)<radius+enemy.BodyRadius&&Room.HasLineOfSight(origin,enemy.Position)) enemy.TakeDamage(new DamageInfo(damage,origin,320,burn));
+            if(!enemy.Dead&&enemy.Position.DistanceTo(origin)<radius+enemy.BodyRadius&&Room.HasLineOfSight(origin,enemy.Position)) enemy.TakeDamage(new DamageInfo(damage*Player.Flame.LastEmberDamageMultiplier,origin,320,burn));
     }
     public void OnEnemyKilled(Enemy enemy,bool burning)
     {
@@ -201,11 +209,17 @@ public partial class RunManager : Node
             if(burning)amount+=Player.Build.Get(ArtifactEffect.BurnHeal);
             _transient.AddChild(new EmberPickup {Run=this,Position=enemy.Position,Amount=amount});
         }
-        Fx.Sparks(enemy.Position,new Color(1,.48f,.13f),20);
+        Fx.Sparks(enemy.Position,FlamePalette.Fire(Player.Flame.LastEmber),20);
         if(burning&&Player.Build.Has(ArtifactEffect.BurnExplosion))Explode(enemy.Position,95,18,false);
         if(enemy.Kind==EnemyKind.Boss)EndRun(true);
     }
     public void Shake(float amount)=>_shake=Mathf.Max(_shake,amount);
+    public void HitStop(float seconds)
+    {
+        if(!Playing||!IsInstanceValid(_world))return;
+        _hitStop=Mathf.Max(_hitStop,Mathf.Clamp(seconds,0,.06f));
+        _world.ProcessMode=ProcessModeEnum.Disabled;
+    }
     private void CompleteRoom()
     {
         _stageResolved=true;Room.QueueRedraw();Audio.Play("reward");

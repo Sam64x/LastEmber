@@ -147,7 +147,8 @@ public partial class MusicDirector : Node
         }
         _duck=Mathf.Lerp(_duck,1,1-Mathf.Exp(-dt*3));
         _pauseGain=Mathf.Lerp(_pauseGain,Run.State is RunState.Pause or RunState.Reward?.53f:1,1-Mathf.Exp(-dt*2));
-        var state=new MusicFrame(desired,SmoothedFlame,Danger,lit,bossRatio,HopeSeconds,Run.CurrentStage==StageKind.Elite);
+        bool lastEmber=GodotObject.IsInstanceValid(Run.Player)&&Run.State!=RunState.Menu&&Run.Player.Flame.LastEmber;
+        var state=new MusicFrame(desired,SmoothedFlame,Danger,lit,bossRatio,HopeSeconds,Run.CurrentStage==StageKind.Elite,lastEmber);
         MusicMix.Evaluate(state,_targets);
         foreach(var pair in _banks)
         {
@@ -158,7 +159,7 @@ public partial class MusicDirector : Node
             {
                 int index=(int)stem.Kind;
                 float target=current?_targets[index]:bank.Gains[index];
-                float rate=target<bank.Gains[index]?2.5f:1.3f;
+                float rate=lastEmber?8:target<bank.Gains[index]?2.5f:1.3f;
                 bank.Gains[index]=Mathf.Lerp(bank.Gains[index],target,1-Mathf.Exp(-dt*rate));
                 bank.Stream.SetSyncStreamVolume(stem.Index,Db(bank.Gains[index]*Trims[index]));
             }

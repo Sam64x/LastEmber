@@ -37,6 +37,7 @@ public partial class EmberLight : PointLight2D
     public override void _Process(double delta)
     {
         Radius = Mathf.Lerp(Radius, TargetRadius, 1 - Mathf.Exp(-(float)delta * 8));
+        Color=Color.Lerp(Tint,1-Mathf.Exp(-(float)delta*12));
         TextureScale = Radius / 128;
         Enabled = Lit;
     }

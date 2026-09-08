@@ -15,7 +15,7 @@ public sealed class BuildStats
     public bool Has(ArtifactEffect effect) => _effects.ContainsKey(effect);
     public bool Owns(string id) => Artifacts.Exists(a => a.Id == id);
     public float DamageMultiplier(FlamePool flame) => (1 + Get(ArtifactEffect.Glass)) *
-        (flame.Ratio < .3f ? 1 + Get(ArtifactEffect.LowDamage) : 1);
+        (flame.Ratio < .3f ? 1 + Get(ArtifactEffect.LowDamage) : 1)*flame.LastEmberDamageMultiplier;
     public float SpeedMultiplier(FlamePool flame) => flame.Current < 15 ? 1 + Get(ArtifactEffect.LowSpeed) : 1;
     public float LightMultiplier => 1 - Get(ArtifactEffect.DarkRewards);
 

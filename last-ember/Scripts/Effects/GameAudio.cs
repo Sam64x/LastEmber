@@ -44,6 +44,15 @@ public partial class GameAudio : Node
         _sounds["stalker_step"]=Texture(.3f,72,29,.6f,58);
         _sounds["watcher_shot"]=Texture(.24f,580,100,.3f,61);
         _sounds["trap"]=Texture(.45f,950,110,.8f,62);
+        _sounds["strike_ignition"]=StrikeLayer(0,.075f,101);
+        _sounds["strike_whoosh"]=StrikeLayer(1,.22f,102);
+        _sounds["strike_impact"]=StrikeLayer(2,.19f,103);
+        _sounds["strike_sparks"]=StrikeLayer(3,.34f,104);
+        _sounds["strike_miss"]=StrikeLayer(4,.18f,105);
+        _sounds["last_ember"]=Texture(.65f,1200,95,.38f,201);
+        _sounds["ember_return"]=Texture(.5f,160,680,.3f,202);
+        _sounds["blue_pulse"]=Texture(.4f,760,220,.65f,203);
+        _sounds["blue_crackle"]=StrikeLayer(3,.48f,204);
         SetVolume(Volume);
     }
     public override void _Process(double delta){_time+=(float)delta;}
@@ -58,8 +67,8 @@ public partial class GameAudio : Node
         float minimum=id=="hit"?.045f:id=="ignite"?.22f:.065f;
         if(_lastPlayed.TryGetValue(id,out float last)&&_time-last<minimum)return;
         _lastPlayed[id]=_time;
-        var voice = _voices[_voice++ % _voices.Length]; voice.Stream = stream; voice.Play();
-        voice.VolumeDb=id is "ember_loss" or "ignite"?-20:id=="hit"?-20:id=="reveal"?-18:-15;
+        var voice = _voices[_voice++ % _voices.Length]; voice.Stream = stream; voice.PitchScale=1;voice.Play();
+        voice.VolumeDb=id=="blue_crackle"?-23:id is "ember_loss" or "ignite"?-20:id=="hit"?-20:id=="reveal"?-18:-15;
         if(id is "burst" or "hurt" or "warning")StrongSoundPlayed?.Invoke();
     }
     public void PlayAt(string id,Vector2 position,float gain=1)
@@ -67,6 +76,40 @@ public partial class GameAudio : Node
         if(!_sounds.TryGetValue(id,out var stream))return;
         var voice=_spatial[_spatialVoice++%_spatial.Length];voice.Stream=stream;voice.GlobalPosition=position;
         voice.VolumeDb=-19+MusicDirector.Db(gain);voice.PitchScale=.94f+(_spatialVoice%5)*.025f;voice.Play();
+    }
+    public void PlayStrike(string id,float strength)
+    {
+        // Dedicated non-spatial voices preserve the attack's layered transient amid enemy footsteps.
+        if(!_sounds.TryGetValue(id,out var stream))return;
+        var voice=_voices[_voice++%_voices.Length];voice.Stream=stream;
+        voice.VolumeDb=(id=="strike_impact"?-12:id=="strike_whoosh"?-14:-19)+MusicDirector.Db(Mathf.Lerp(.5f,1,strength));
+        voice.PitchScale=.97f+(_voice%5)*.015f;voice.Play();
+        if(id=="strike_impact")StrongSoundPlayed?.Invoke();
+    }
+    private static AudioStreamWav StrikeLayer(int layer,float duration,int seed)
+    {
+        const int rate=22050;int count=(int)(duration*rate);var bytes=new byte[count*2];
+        var random=new Random(seed);double low=0,phase=0,crackle=0;
+        for(int i=0;i<count;i++)
+        {
+            double t=(double)i/count,white=random.NextDouble()*2-1;
+            double cutoff=layer==1?.08+.45*Math.Sin(Math.PI*t):.18;
+            low+=cutoff*(white-low);phase+=Math.Tau*(layer==2?52+100*Math.Exp(-t*15):110+170*t)/rate;
+            if(random.NextDouble()<(layer==3?.003:.0006))crackle=1;
+            crackle*=.86;
+            double envelope=Math.Min(1,t*(layer==0?10:layer==1?14:60))*Math.Pow(1-t,layer==1?1.7:2.8);
+            double value=layer switch
+            {
+                0=>(white-low)*.48+low*.35+crackle*white*.4,
+                1=>low*1.7+(white-low)*.16,
+                2=>Math.Sin(phase)*.63+low*.6+(white-low)*.25*Math.Exp(-t*12),
+                3=>(white-low)*crackle*1.5+low*.1,
+                _=>low*.85+(white-low)*.11
+            };
+            short sample=(short)(Math.Tanh(value*envelope)*27000);
+            bytes[i*2]=(byte)(sample&255);bytes[i*2+1]=(byte)((sample>>8)&255);
+        }
+        return new AudioStreamWav {Format=AudioStreamWav.FormatEnum.Format16Bits,MixRate=rate,Data=bytes};
     }
     public void StopAll()
     {

@@ -26,10 +26,14 @@ public partial class Effects : Node2D
     }
     public void Ring(Vector2 position, float radius, Color color)
         => _particles.Add(new Particle { Position = position, Size = radius, Color = color, Life = .45f, Max = .45f, Kind = 1 });
-    public void Ghost(Vector2 position)
-        => _particles.Add(new Particle { Position = position, Size = 16, Color = new Color(1, .5f, .12f), Life = .25f, Max = .25f, Kind = 2 });
+    public void Ghost(Vector2 position,bool blue=false)
+        => _particles.Add(new Particle { Position = position, Size = 16, Color = FlamePalette.Fire(blue), Life = .25f, Max = .25f, Kind = 2 });
     public void Text(Vector2 position, string label, Color color)
         => _particles.Add(new Particle { Position = position, Velocity = new Vector2(0, -35), Label = label, Color = color, Life = .85f, Max = .85f, Kind = 3 });
+    public void FireImpact(Vector2 position,Vector2 direction,float strength,bool blue=false)
+        =>AddChild(new FireImpactFx {Position=position,Direction=direction,Strength=strength,Blue=blue});
+    public void FlameTransition(Vector2 position,bool blue)
+        =>AddChild(new FlameTransitionFx {Position=position,Blue=blue});
     public override void _Process(double delta)
     {
         float dt = (float)delta;

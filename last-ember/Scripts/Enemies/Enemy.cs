@@ -66,7 +66,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
         if (Dead || !Run.Playing) return;
         float dt = (float)delta;
         Clock += dt; Flash = Mathf.Max(0, Flash - dt); Cooldown -= dt; _tetherGrace -= dt;
-        if (Burn.Tick(dt)) TakeDamage(new DamageInfo(5, Position, 0, IsBurnTick:true));
+        if (Burn.Tick(dt)) TakeDamage(new DamageInfo(5*Run.Player.Flame.LastEmberDamageMultiplier, Position, 0, IsBurnTick:true));
         if (Dead) return;
         if (!FrozenForTest) Behave(dt);
         QueueRedraw();
@@ -194,9 +194,9 @@ public partial class Enemy : CharacterBody2D, IDamageable
         Health = Mathf.Max(0, Health - hit.Amount);
         Flash = .13f; Active = true;
         Knockback = (Position - hit.Origin).Normalized() * hit.Knockback;
-        Run.Fx.Sparks(Position, new Color(1, .62f, .26f), 7);
+        Run.Fx.Sparks(Position, FlamePalette.Fire(Run.Player.Flame.LastEmber), 7);
         Run.Fx.Text(Position - new Vector2(0, BodyRadius + 12), $"{hit.Amount:0}", new Color(1, .87f, .65f));
-        Run.Audio.Play("hit");
+        if(!hit.Strike)Run.Audio.Play("hit");
         if (Health > 0) return;
         Dead = true;
         if (Light != null) { Light.Lit = false; Run.Lights.Remove(Light); }
@@ -245,7 +245,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
             { DrawLine(new Vector2(30,20),new Vector2(36,-43),new Color(.6f,.39f,.22f),5); DrawCircle(new Vector2(36,-45),11,new Color(1,.6f,.15f)); }
         }
         if (Telegraph > 0 && Kind != EnemyKind.Watcher) DrawArc(Vector2.Zero, r + 16, 0, Mathf.Tau, 32, new Color(1,.27f,.16f,.9f), 3);
-        if (Burn.Active) { DrawCircle(new Vector2(-r,-r*.3f),4,new Color(1,.45f,.08f)); DrawCircle(new Vector2(r,-r*.6f),5,new Color(1,.7f,.14f)); }
+        if (Burn.Active) { DrawCircle(new Vector2(-r,-r*.3f),4,FlamePalette.Fire(Run.Player.Flame.LastEmber)); DrawCircle(new Vector2(r,-r*.6f),5,FlamePalette.Shift(new Color(1,.7f,.14f),Run.Player.Flame.LastEmber)); }
         if (Health < MaxHealth)
         {
             DrawRect(new Rect2(-r, -r-18, r*2, 4), new Color(.12f,.08f,.10f));

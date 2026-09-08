@@ -1,4 +1,4 @@
-param([switch]$Test, [switch]$MusicTest, [switch]$Playtest, [switch]$Capture, [switch]$Editor, [switch]$Run)
+param([switch]$Test, [switch]$MusicTest, [switch]$AudioCapture, [switch]$Playtest, [switch]$Capture, [switch]$Editor, [switch]$Run)
 $ErrorActionPreference = 'Stop'
 $taskRoot = $PSScriptRoot
 $env:DOTNET_ROOT = Join-Path $taskRoot '.tools/dotnet'
@@ -25,6 +25,10 @@ if ($Capture) {
 }
 if ($MusicTest) {
     & $godot --headless --path $project --fixed-fps 60 -- --music-test
+    exit $LASTEXITCODE
+}
+if ($AudioCapture) {
+    & $godot --headless --path $project -- --audio-capture
     exit $LASTEXITCODE
 }
 if ($Playtest) {

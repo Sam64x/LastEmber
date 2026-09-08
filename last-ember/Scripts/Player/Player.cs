@@ -8,14 +8,24 @@ public partial class Player : CharacterBody2D, IDamageable
     [Export] public float MeleeDamage { get; set; } = 20;
     [Export] public float BurstDamage { get; set; } = 48;
     [Export] public float DashDuration { get; set; } = .18f;
+    [Export] public float RevealCost {get;set;}=5;
+    [Export] public float RevealCooldownSeconds {get;set;}=10;
+    [Export] public float RevealRadius {get;set;}=1900;
+    [Export] public float RevealExpandSeconds {get;set;}=.65f;
+    [Export] public float RevealHoldSeconds {get;set;}=1.35f;
+    [Export] public float RevealFadeSeconds {get;set;}=2.25f;
     public FlamePool Flame { get; } = new();
     public BuildStats Build { get; } = new();
     public EmberLight Light { get; private set; } = null!;
+    public EmberLight RevealLight {get;private set;}=null!;
     public RunManager Run { get; set; } = null!;
     public bool Dead => Flame.Dead;
     public bool Dashing => _dashTime > 0;
     public float DashCooldown { get; private set; }
     public float BurstCooldown { get; private set; }
+    public float RevealCooldown {get;private set;}
+    public bool Revealing {get;private set;}
+    private float _revealTime,_revealStart;
     public Vector2 Aim { get; set; } = Vector2.Right;
     public Vector2 TestMovement { get; set; }
     public bool Automated { get; set; }
@@ -30,6 +40,7 @@ public partial class Player : CharacterBody2D, IDamageable
         CollisionLayer = 2; CollisionMask = 1;
         AddChild(new CollisionShape2D { Shape = new CircleShape2D { Radius = 15 } });
         Light = new EmberLight(); AddChild(Light);
+        RevealLight=new EmberLight {Name="RevealLight",Lit=false,Tint=new Color(1,.85f,.63f),Intensity=.95f};AddChild(RevealLight);
         Flame.Emptied += () => Run.EndRun(false);
         Flame.Changed+=OnFlameChanged;
         ZIndex = 8;
@@ -40,6 +51,7 @@ public partial class Player : CharacterBody2D, IDamageable
         var dt = (float)delta;
         DashCooldown = Mathf.Max(0, DashCooldown - dt);
         BurstCooldown = Mathf.Max(0, BurstCooldown - dt);
+        RevealCooldown=Mathf.Max(0,RevealCooldown-dt);
         _invulnerable = Mathf.Max(0, _invulnerable - dt);
         _attackCooldown -= dt; _swing = Mathf.Max(0, _swing - dt);
         var input = Automated ? TestMovement.LimitLength() : Input.GetVector("left", "right", "up", "down");
@@ -48,6 +60,7 @@ public partial class Player : CharacterBody2D, IDamageable
             var aim = GetGlobalMousePosition() - GlobalPosition;
             if (aim.LengthSquared() > 1) Aim = aim.Normalized();
             if (Input.IsActionJustPressed("dash")) TryDash(input);
+            if (Input.IsActionJustPressed("reveal")) TryReveal();
             if(_waitForMouseRelease)_waitForMouseRelease=Input.IsActionPressed("melee")||Input.IsActionPressed("burst");
             else
             {
@@ -73,7 +86,8 @@ public partial class Player : CharacterBody2D, IDamageable
         _stepClock-=dt;
         if(!Dashing&&Velocity.LengthSquared()>1000&&_stepClock<=0){_stepClock=.42f;Run.Audio.PlayAt("step",Position,.65f);}
         Position = new Vector2(Mathf.Clamp(Position.X, 112, 1808), Mathf.Clamp(Position.Y, 175, 936));
-        Light.TargetRadius = (110 + 340 * Mathf.Pow(Flame.Ratio, .65f)) * Build.LightMultiplier;
+        Light.TargetRadius = FlameLight.Radius(Flame.Current,Build.LightMultiplier);
+        UpdateReveal(dt);
         QueueRedraw();
     }
     public bool TryDash(Vector2 direction)
@@ -87,6 +101,36 @@ public partial class Player : CharacterBody2D, IDamageable
         return true;
     }
     public void SuppressUiClick()=>_waitForMouseRelease=true;
+    public bool TryReveal()
+    {
+        if(Dead||!Run.Playing||RevealCooldown>0||!Flame.Spend(RevealCost))return false;
+        RevealCooldown=RevealCooldownSeconds;Revealing=true;_revealTime=0;_revealStart=Light.Radius;
+        RevealLight.ResetRadius(_revealStart);RevealLight.Energy=RevealLight.Intensity;RevealLight.Lit=true;
+        if(!Run.Lights.Contains(RevealLight))Run.Lights.Add(RevealLight);
+        Run.Audio.Play("reveal");Run.Fx.Sparks(Position,new Color(1,.85f,.55f),14);
+        return true;
+    }
+    private void UpdateReveal(float dt)
+    {
+        if(!Revealing)return;
+        _revealTime+=dt;
+        float fadeStart=RevealExpandSeconds+RevealHoldSeconds;
+        if(_revealTime<RevealExpandSeconds)
+            RevealLight.TargetRadius=Mathf.Lerp(_revealStart,RevealRadius,Mathf.SmoothStep(0,1,_revealTime/RevealExpandSeconds));
+        else if(_revealTime<fadeStart)RevealLight.TargetRadius=RevealRadius;
+        else
+        {
+            float fade=Mathf.SmoothStep(0,1,Mathf.Clamp((_revealTime-fadeStart)/RevealFadeSeconds,0,1));
+            RevealLight.TargetRadius=Mathf.Lerp(RevealRadius,Light.TargetRadius,fade);
+            RevealLight.Energy=RevealLight.Intensity*(1-fade);
+            if(_revealTime>=fadeStart+RevealFadeSeconds)ResetForRoom();
+        }
+    }
+    public void ResetForRoom()
+    {
+        Revealing=false;_revealTime=0;RevealLight.Lit=false;RevealLight.Energy=0;
+        Run.Lights.Remove(RevealLight);
+    }
     private void OnFlameChanged()
     {
         if(Flame.Current>_lastFlame+.5f)Run.Audio.Play("ignite");
@@ -129,6 +173,8 @@ public partial class Player : CharacterBody2D, IDamageable
     }
     public override void _Draw()
     {
+        if(Revealing&&_revealTime<1.1f)
+            DrawArc(Vector2.Zero,Mathf.Max(20,RevealLight.Radius*.88f),0,Mathf.Tau,128,new Color(1,.86f,.56f,.65f*(1-_revealTime/1.1f)),4,true);
         DrawCircle(new Vector2(0, 13), 21, new Color(0, 0, 0, .65f));
         var white = _invulnerable > .2f && ((int)(_invulnerable * 25) % 2 == 0);
         var c = white ? Colors.White : new Color(1, .56f, .19f);

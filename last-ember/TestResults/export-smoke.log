@@ -1,5 +1,5 @@
-PASS — 147 assertions
-Godot 4.7.2-stable (official)
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
 PASS: 01-02: engine startup and main menu
 PASS: UI button available: StartRun
 PASS: 03: start run
@@ -147,3 +147,4 @@ PASS: seed reproduces layout and enemy composition
 PASS: different seed varies run
 PASS: eight distinct handcrafted layouts
 PASS: main menu return clears pause
+TEST RESULT: PASS (147 assertions)

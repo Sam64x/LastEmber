@@ -1,0 +1,2 @@
+PASS: actual Godot music bus records audible unclipped audio.
+Sample rate 44100; peak 0,2740; RMS 0,0538; PCM bytes 1966080.

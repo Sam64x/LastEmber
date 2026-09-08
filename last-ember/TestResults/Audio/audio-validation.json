@@ -1,0 +1,329 @@
+{
+  "status": "PASS",
+  "previews": [
+    {
+      "file": "01_The_Last_Ember.ogg",
+      "seconds": 96,
+      "peak": 0.2752382755279541,
+      "rms": 0.04354233294725418,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -25.3 LUFS\n    Threshold: -35.4 LUFS\n\n  Loudness range:\n    LRA:        13.6 LU\n    Threshold: -45.3 LUFS\n    LRA low:   -34.3 LUFS\n    LRA high:  -20.6 LUFS\n\n  True peak:\n    Peak:      -11.1 dBFS\n[out#0/null @ 000001742bf293c0] video:0KiB audio:12000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:01:36.00 bitrate=N/A speed= 344x    \n"
+    },
+    {
+      "file": "02_Dead_Streets.ogg",
+      "seconds": 192,
+      "peak": 0.19758769869804382,
+      "rms": 0.03174538537859917,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -28.7 LUFS\n    Threshold: -38.7 LUFS\n\n  Loudness range:\n    LRA:        11.1 LU\n    Threshold: -48.7 LUFS\n    LRA low:   -35.3 LUFS\n    LRA high:  -24.2 LUFS\n\n  True peak:\n    Peak:      -14.1 dBFS\n[out#0/null @ 000002137dd693c0] video:0KiB audio:24000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:03:12.00 bitrate=N/A speed= 343x    \n"
+    },
+    {
+      "file": "03_Feed_the_Fire.ogg",
+      "seconds": 192,
+      "peak": 0.26302289962768555,
+      "rms": 0.042690303176641464,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -26.8 LUFS\n    Threshold: -36.8 LUFS\n\n  Loudness range:\n    LRA:         8.9 LU\n    Threshold: -46.7 LUFS\n    LRA low:   -32.0 LUFS\n    LRA high:  -23.0 LUFS\n\n  True peak:\n    Peak:      -11.7 dBFS\n[out#0/null @ 000001ee0b549440] video:0KiB audio:24000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:03:12.00 bitrate=N/A speed= 342x    \n"
+    },
+    {
+      "file": "04_The_Offering.ogg",
+      "seconds": 120,
+      "peak": 0.21097257733345032,
+      "rms": 0.03783661872148514,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -26.9 LUFS\n    Threshold: -36.9 LUFS\n\n  Loudness range:\n    LRA:         2.5 LU\n    Threshold: -46.9 LUFS\n    LRA low:   -28.0 LUFS\n    LRA high:  -25.6 LUFS\n\n  True peak:\n    Peak:      -13.6 dBFS\n[out#0/null @ 00000202f2e493c0] video:0KiB audio:15000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:02:00.00 bitrate=N/A speed= 336x    \n"
+    },
+    {
+      "file": "05_The_Extinguisher.ogg",
+      "seconds": 288,
+      "peak": 0.5465645790100098,
+      "rms": 0.08205638825893402,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -19.4 LUFS\n    Threshold: -30.3 LUFS\n\n  Loudness range:\n    LRA:         9.8 LU\n    Threshold: -40.3 LUFS\n    LRA low:   -25.8 LUFS\n    LRA high:  -15.9 LUFS\n\n  True peak:\n    Peak:       -5.5 dBFS\n[out#0/null @ 0000024e42cf9440] video:0KiB audio:36000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:04:48.00 bitrate=N/A speed= 345x    \n"
+    },
+    {
+      "file": "06_The_Furnace_Breathes.ogg",
+      "seconds": 48,
+      "peak": 0.36018669605255127,
+      "rms": 0.07700143754482269,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -19.9 LUFS\n    Threshold: -30.0 LUFS\n\n  Loudness range:\n    LRA:         3.4 LU\n    Threshold: -39.9 LUFS\n    LRA low:   -22.3 LUFS\n    LRA high:  -18.9 LUFS\n\n  True peak:\n    Peak:       -9.0 dBFS\n[out#0/null @ 00000244274294c0] video:0KiB audio:6000KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:00:48.00 bitrate=N/A speed= 342x    \n"
+    },
+    {
+      "file": "Flame_Adaptive_Demo.ogg",
+      "seconds": 92,
+      "peak": 0.2523350715637207,
+      "rms": 0.029119618237018585,
+      "loudness": "Summary:\n\n  Integrated loudness:\n    I:         -29.3 LUFS\n    Threshold: -39.8 LUFS\n\n  Loudness range:\n    LRA:        16.0 LU\n    Threshold: -49.7 LUFS\n    LRA low:   -40.3 LUFS\n    LRA high:  -24.3 LUFS\n\n  True peak:\n    Peak:      -11.9 dBFS\n[out#0/null @ 000002637c0193c0] video:0KiB audio:11500KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown\nsize=N/A time=00:01:32.00 bitrate=N/A speed= 342x    \n"
+    }
+  ],
+  "stems": [
+    {
+      "cue": "menu",
+      "layer": "ambient",
+      "frames": 3072000,
+      "peak": 0.15080614387989044,
+      "loopStep": 0.0028111059218645096
+    },
+    {
+      "cue": "menu",
+      "layer": "melody",
+      "frames": 3072000,
+      "peak": 0.17403340339660645,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "menu",
+      "layer": "fire",
+      "frames": 3072000,
+      "peak": 0.13718944787979126,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "streets",
+      "layer": "ambient",
+      "frames": 6144000,
+      "peak": 0.15945585072040558,
+      "loopStep": 0.002894317265599966
+    },
+    {
+      "cue": "streets",
+      "layer": "melody",
+      "frames": 6144000,
+      "peak": 0.1658780723810196,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "streets",
+      "layer": "strings",
+      "frames": 6144000,
+      "peak": 0.10780061036348343,
+      "loopStep": 1.2053973097447823e-10
+    },
+    {
+      "cue": "streets",
+      "layer": "percussion",
+      "frames": 6144000,
+      "peak": 0.17234405875205994,
+      "loopStep": 0.0012010447680950165
+    },
+    {
+      "cue": "streets",
+      "layer": "bass",
+      "frames": 6144000,
+      "peak": 0.1093413233757019,
+      "loopStep": 0.0006811246275901794
+    },
+    {
+      "cue": "streets",
+      "layer": "tension",
+      "frames": 6144000,
+      "peak": 0.0795864537358284,
+      "loopStep": 2.8540933271870017e-05
+    },
+    {
+      "cue": "streets",
+      "layer": "heartbeat",
+      "frames": 6144000,
+      "peak": 0.08316787332296371,
+      "loopStep": 0.0001859209151007235
+    },
+    {
+      "cue": "streets",
+      "layer": "breath",
+      "frames": 6144000,
+      "peak": 0.11936242878437042,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "streets",
+      "layer": "fire",
+      "frames": 6144000,
+      "peak": 0.14611539244651794,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "streets",
+      "layer": "fragments",
+      "frames": 6144000,
+      "peak": 0.08729042857885361,
+      "loopStep": 0.000545852817595005
+    },
+    {
+      "cue": "offering",
+      "layer": "ambient",
+      "frames": 3840000,
+      "peak": 0.15537382662296295,
+      "loopStep": 0.002804175950586796
+    },
+    {
+      "cue": "offering",
+      "layer": "melody",
+      "frames": 3840000,
+      "peak": 0.09358473867177963,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "offering",
+      "layer": "choir",
+      "frames": 3840000,
+      "peak": 0.09422534704208374,
+      "loopStep": 0.0006173595320433378
+    },
+    {
+      "cue": "offering",
+      "layer": "strings",
+      "frames": 3840000,
+      "peak": 0.11490938067436218,
+      "loopStep": 0.0005133801605552435
+    },
+    {
+      "cue": "offering",
+      "layer": "percussion",
+      "frames": 3840000,
+      "peak": 0.15670651197433472,
+      "loopStep": 0.0006512645049951971
+    },
+    {
+      "cue": "offering",
+      "layer": "heartbeat",
+      "frames": 3840000,
+      "peak": 0.08316787332296371,
+      "loopStep": 0.0001859209151007235
+    },
+    {
+      "cue": "offering",
+      "layer": "breath",
+      "frames": 3840000,
+      "peak": 0.10616199672222137,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "offering",
+      "layer": "fire",
+      "frames": 3840000,
+      "peak": 0.12503552436828613,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "offering",
+      "layer": "fragments",
+      "frames": 3840000,
+      "peak": 0.08729042857885361,
+      "loopStep": 0.0008757645264267921
+    },
+    {
+      "cue": "boss",
+      "layer": "ambient",
+      "frames": 9216000,
+      "peak": 0.15758085250854492,
+      "loopStep": 0.0015407167375087738
+    },
+    {
+      "cue": "boss",
+      "layer": "melody",
+      "frames": 9216000,
+      "peak": 0.23148538172245026,
+      "loopStep": 0.0005354583263397217
+    },
+    {
+      "cue": "boss",
+      "layer": "strings",
+      "frames": 9216000,
+      "peak": 0.1509646326303482,
+      "loopStep": 0.0034109503030776978
+    },
+    {
+      "cue": "boss",
+      "layer": "percussion",
+      "frames": 9216000,
+      "peak": 0.17097108066082,
+      "loopStep": 0.002102665603160858
+    },
+    {
+      "cue": "boss",
+      "layer": "bass",
+      "frames": 9216000,
+      "peak": 0.1093413233757019,
+      "loopStep": 0.0006811246275901794
+    },
+    {
+      "cue": "boss",
+      "layer": "choir",
+      "frames": 9216000,
+      "peak": 0.12897148728370667,
+      "loopStep": 0.0011058235540986061
+    },
+    {
+      "cue": "boss",
+      "layer": "tension",
+      "frames": 9216000,
+      "peak": 0.07652022689580917,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "boss",
+      "layer": "heartbeat",
+      "frames": 9216000,
+      "peak": 0.08316787332296371,
+      "loopStep": 0.0001859209151007235
+    },
+    {
+      "cue": "boss",
+      "layer": "breath",
+      "frames": 9216000,
+      "peak": 0.12070012092590332,
+      "loopStep": 0.0
+    },
+    {
+      "cue": "boss",
+      "layer": "fire",
+      "frames": 9216000,
+      "peak": 0.15519316494464874,
+      "loopStep": 2.9134025680832565e-05
+    },
+    {
+      "cue": "boss",
+      "layer": "fragments",
+      "frames": 9216000,
+      "peak": 0.08731339126825333,
+      "loopStep": 2.09533391171135e-05
+    },
+    {
+      "cue": "boss",
+      "layer": "hope",
+      "frames": 9216000,
+      "peak": 0.24571038782596588,
+      "loopStep": 0.0005846172571182251
+    },
+    {
+      "cue": "victory",
+      "layer": "ambient",
+      "frames": 1536000,
+      "peak": 0.1510275900363922,
+      "loopStep": 0.00033455900847911835
+    },
+    {
+      "cue": "victory",
+      "layer": "melody",
+      "frames": 1536000,
+      "peak": 0.1789727509021759,
+      "loopStep": 0.0016413372941315174
+    },
+    {
+      "cue": "victory",
+      "layer": "strings",
+      "frames": 1536000,
+      "peak": 0.11401402950286865,
+      "loopStep": 0.0011027036234736443
+    },
+    {
+      "cue": "victory",
+      "layer": "choir",
+      "frames": 1536000,
+      "peak": 0.1316954493522644,
+      "loopStep": 0.001905389130115509
+    },
+    {
+      "cue": "victory",
+      "layer": "fire",
+      "frames": 1536000,
+      "peak": 0.15641522407531738,
+      "loopStep": 0.0
+    }
+  ]
+}

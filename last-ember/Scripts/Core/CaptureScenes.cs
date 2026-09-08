@@ -16,6 +16,14 @@ public partial class CaptureScenes : Node
             Run.StartRun(20260908);Run.Player.Automated=true;Run.Player.Position=new Vector2(850,550);
             foreach(var enemy in Run.Enemies)enemy.FrozenForTest=true;
             await Wait(25);await Save("gameplay");
+            Run.Player.TryReveal();await Wait(15);await Save("reveal-wave");
+            await Wait(70);await Save("reveal-hold");
+            await Wait(100);await Save("reveal-fading");
+            await Wait(100);await Save("reveal-ended");
+            Run.Player.Flame.Damage(Run.Player.Flame.Current-50);await Wait(65);await Save("light-50");
+            Run.Player.Flame.Damage(30);await Wait(65);await Save("light-20");
+            Run.Player.Flame.Damage(15);await Wait(65);await Save("light-5");
+            Run.Player.Flame.Damage(4);await Wait(65);await Save("light-1");Run.Player.Flame.Heal(100);
             Run.OpenRewards();await Wait(10);await Save("rewards");
             Run.ChooseReward(0);Run.TogglePause();await Wait(5);await Save("pause");Run.TogglePause();
             Run.Player.Flame.Damage(88);await Wait(90);await Save("low-flame");

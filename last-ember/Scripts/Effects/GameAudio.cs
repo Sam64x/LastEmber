@@ -39,6 +39,7 @@ public partial class GameAudio : Node
         _sounds["heavy_step"]=Texture(.32f,60,25,.45f,11);
         _sounds["moth"]=Texture(.4f,400,700,.94f,13);
         _sounds["siphon"]=Texture(.5f,180,78,.7f,15);
+        _sounds["reveal"]=Texture(1.1f,220,440,.55f,37);
         SetVolume(Volume);
     }
     public override void _Process(double delta){_time+=(float)delta;}
@@ -54,7 +55,7 @@ public partial class GameAudio : Node
         if(_lastPlayed.TryGetValue(id,out float last)&&_time-last<minimum)return;
         _lastPlayed[id]=_time;
         var voice = _voices[_voice++ % _voices.Length]; voice.Stream = stream; voice.Play();
-        voice.VolumeDb=id is "ember_loss" or "ignite"?-20:id=="hit"?-20:-15;
+        voice.VolumeDb=id is "ember_loss" or "ignite"?-20:id=="hit"?-20:id=="reveal"?-18:-15;
         if(id is "burst" or "hurt" or "warning")StrongSoundPlayed?.Invoke();
     }
     public void PlayAt(string id,Vector2 position,float gain=1)

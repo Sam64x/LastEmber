@@ -41,7 +41,7 @@ public partial class RunManager : Node
     {
         ProcessMode = ProcessModeEnum.Always;
         SetupInput();
-        foreach(var file in DirAccess.GetFilesAt("res://Resources/Artifacts"))
+        foreach(var file in ResourceLoader.ListDirectory("res://Resources/Artifacts"))
             if(file.EndsWith(".tres")) Artifacts.Add(ResourceLoader.Load<ArtifactData>("res://Resources/Artifacts/"+file));
         Artifacts.Sort((a,b)=>string.CompareOrdinal(a.Id,b.Id));
         Audio = new GameAudio(); AddChild(Audio);
@@ -53,6 +53,7 @@ public partial class RunManager : Node
         if (TestMode) CallDeferred(MethodName.StartTests);
         else if (Array.Exists(args,a=>a=="--playtest")) CallDeferred(MethodName.StartPlaytest);
         else if (Array.Exists(args,a=>a=="--music-test")) CallDeferred(MethodName.StartMusicTests);
+        else if (Array.Exists(args,a=>a=="--audio-capture")) CallDeferred(MethodName.StartAudioCapture);
         else if (Array.Exists(args,a=>a=="--capture")) CallDeferred(MethodName.StartCapture);
     }
     private static void SetupInput()
@@ -60,6 +61,7 @@ public partial class RunManager : Node
         void KeyAction(string name,Key key) { if(!InputMap.HasAction(name)) InputMap.AddAction(name); InputMap.ActionAddEvent(name,new InputEventKey { PhysicalKeycode=key }); }
         KeyAction("left",Key.A);KeyAction("right",Key.D);KeyAction("up",Key.W);KeyAction("down",Key.S);
         KeyAction("dash",Key.Space);KeyAction("pause",Key.Escape);KeyAction("interact",Key.E);
+        KeyAction("reveal",Key.Q);
         foreach(var pair in new[] {("melee",MouseButton.Left),("burst",MouseButton.Right)})
         { if(!InputMap.HasAction(pair.Item1)) InputMap.AddAction(pair.Item1); InputMap.ActionAddEvent(pair.Item1,new InputEventMouseButton { ButtonIndex=pair.Item2 }); }
     }
@@ -77,7 +79,7 @@ public partial class RunManager : Node
         if(IsInstanceValid(_world)) { RemoveChild(_world); _world.QueueFree(); }
         Enemies.Clear();Lights.Clear();_fires.Clear();
         _world = new Node2D { ProcessMode = ProcessModeEnum.Pausable }; AddChild(_world); MoveChild(_world,0);
-        _world.AddChild(new CanvasModulate { Color=new Color(.40f,.41f,.46f) });
+        _world.AddChild(new CanvasModulate { Color=Colors.Black });
         _camera = new Camera2D { Position=new Vector2(960,540),PositionSmoothingEnabled=true,PositionSmoothingSpeed=6 }; _world.AddChild(_camera);
         Fx = new Effects();_world.AddChild(Fx);
     }
@@ -104,7 +106,7 @@ public partial class RunManager : Node
     {
         if(IsInstanceValid(Room) && Room.GetParent()==_world) { _world.RemoveChild(Room);Room.QueueFree(); }
         if(IsInstanceValid(_transient) && _transient.GetParent()==_world) { _world.RemoveChild(_transient);_transient.QueueFree(); }
-        Enemies.Clear();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
+        Enemies.Clear();Player.ResetForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
         _transient=new Node2D();_world.AddChild(_transient);
         Room=ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn").Instantiate<Room>();
         Room.Run=this;Room.Layout=_rng.RandiRange(0,7);Room.BossArena=CurrentStage==StageKind.Boss;
@@ -259,4 +261,5 @@ public partial class RunManager : Node
     private void StartCapture() {AddChild(new CaptureScenes { Run=this });}
     private void StartPlaytest() {AddChild(new BotPlaytest { Run=this });}
     private void StartMusicTests() {AddChild(new MusicTests { Run=this });}
+    private void StartAudioCapture() {AddChild(new AudioCapture { Run=this });}
 }

@@ -40,6 +40,7 @@ public partial class MusicDirector : Node
     {
         ProcessMode=ProcessModeEnum.Always;
         EnsureBus("Music");EnsureBus("SFX");
+        AudioServer.AddBusEffect(0,new AudioEffectHardLimiter {CeilingDb=-1,PreGainDb=0,Release=.12f});
         var config=new ConfigFile();Volume=DefaultVolume;
         if(config.Load("user://audio.cfg")==Error.Ok)
         {

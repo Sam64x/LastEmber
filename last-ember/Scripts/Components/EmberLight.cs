@@ -9,7 +9,10 @@ public partial class EmberLight : PointLight2D
     public float Radius { get; private set; } = 300;
     public float TargetRadius { get; set; } = 300;
     public bool Lit { get; set; } = true;
-    public bool Contains(Vector2 point) => Lit && GlobalPosition.DistanceSquaredTo(point) < Radius * Radius;
+    public Color Tint {get;set;}=new Color(1,.63f,.30f);
+    public float Intensity {get;set;}=1.35f;
+    public bool Contains(Vector2 point) => Lit && Energy>.05f && GlobalPosition.DistanceSquaredTo(point) < Radius * Radius;
+    public void ResetRadius(float radius){Radius=radius;TargetRadius=radius;TextureScale=radius/128;}
 
     public override void _Ready()
     {
@@ -18,6 +21,7 @@ public partial class EmberLight : PointLight2D
             var gradient = new Gradient();
             gradient.SetColor(0, Colors.White);
             gradient.SetColor(1, new Color(1, 1, 1, 0));
+            gradient.AddPoint(.68f,Colors.White);
             _texture = new GradientTexture2D
             {
                 Width = 256, Height = 256, Gradient = gradient,
@@ -26,8 +30,8 @@ public partial class EmberLight : PointLight2D
             };
         }
         Texture = _texture;
-        Color = new Color(1, .63f, .30f);
-        Energy = 1.35f;
+        Color = Tint;
+        Energy = Intensity;
         ShadowEnabled = false;
     }
     public override void _Process(double delta)

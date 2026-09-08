@@ -1,0 +1,39 @@
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
+ERROR: Failed to read the root certificate store.
+   at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)
+PASS: Danger adds combat percussion to the same exploration cue
+PASS: high Flame creates quiet attention textures even at low Danger
+PASS: 50 percent Flame retains melody and reduces strings
+PASS: 20 percent Flame brings heartbeat and broken motif
+PASS: 5 percent Flame removes ordinary combat layers even under high Danger
+PASS: near silence keeps breath and a final ember
+PASS: four torches support choir and strings
+PASS: first torch removes choir
+PASS: second torch removes strings
+PASS: third torch nearly removes percussion
+PASS: last torch creates musical blackout
+PASS: blackout preserves heartbeat and breath
+PASS: at 15 percent boss HP the piano returns first
+PASS: hope grows into strings and percussion after the piano
+PASS: victory completes the warm theme regardless of remaining Flame
+PASS: mix remains bounded at all Flame/Danger edge cases
+PASS: five cue banks and every equal-duration Ogg stem load
+PASS: menu music transport starts
+PASS: music volume control appears in menu
+PASS: music slider controls actual director volume
+PASS: new run crossfades from menu to exploration
+PASS: real nearby enemies fade in combat layers
+PASS: entering combat does not restart or seek the synchronized transport
+PASS: combat layers fade back out after danger passes
+PASS: real Flame loss introduces heartbeat
+PASS: real 5 Flame strips away melody
+PASS: restoring 5 to 25 Flame brings music back
+PASS: health-driven fades preserve musical phase
+PASS: pause ducks music without destroying its transport
+PASS: music mute preserves synchronization and leaves SFX independent
+PASS: death fades the score into silence
+PASS: retry resets boss musical state without duplicate players
+PASS: victory crossfades to completed theme
+PASS: return to menu releases previous cue
+MUSIC TESTS: PASS (34 assertions)

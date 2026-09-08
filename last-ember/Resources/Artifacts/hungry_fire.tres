@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "hungry_fire"
+DisplayName = "Hungry Fire"
+Description = "Killing a burning enemy restores 3 extra Flame."
+Rarity = 2
+Effect = 8
+Value = 3

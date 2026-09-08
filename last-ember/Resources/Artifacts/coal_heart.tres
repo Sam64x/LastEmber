@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "coal_heart"
+DisplayName = "Coal Heart"
+Description = "Max Flame +20. Restore 20 Flame when claimed."
+Rarity = 1
+Effect = 0
+Value = 20

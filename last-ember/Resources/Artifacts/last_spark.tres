@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "last_spark"
+DisplayName = "Last Spark"
+Description = "Move 30% faster while below 15 Flame."
+Rarity = 1
+Effect = 6
+Value = 0.3

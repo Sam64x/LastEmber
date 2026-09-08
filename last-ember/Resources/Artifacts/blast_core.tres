@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "blast_core"
+DisplayName = "Blast Core"
+Description = "Flame Burst radius +30%. Catch more shadows in a single wave."
+Rarity = 1
+Effect = 4
+Value = 0.3

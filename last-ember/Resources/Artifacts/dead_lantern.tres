@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "dead_lantern"
+DisplayName = "Dead Lantern"
+Description = "Light radius −30%. Future reward choices favor rarer relics."
+Rarity = 3
+Effect = 9
+Value = 0.3

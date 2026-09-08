@@ -1,0 +1,126 @@
+FAIL — 120 assertions
+Godot 4.7.2-stable (official)
+PASS: 01-02: engine startup and main menu
+PASS: UI button available: StartRun
+PASS: 03: start run
+PASS: 10 artifact Resources load
+PASS: 04: movement at approximately 220 px/s
+PASS: 05: diagonal movement normalized
+PASS: 06: dash starts
+PASS: 07: dash cooldown prevents repeat
+PASS: dash invulnerability
+PASS: 08-09: damage reduces Flame
+PASS: damage i-frames prevent repeated hits
+PASS: 10: light interpolates down with Flame, preserving visibility
+PASS: 13: burst spends exactly 10
+PASS: burst denied below cost
+PASS: 12: melee input accepted
+PASS: 12: melee hit deals 20 damage
+PASS: 15: enemy dies once
+PASS: 16: Ashling kill restores 3 Flame
+PASS: dead enemy cannot reward twice
+PASS: 13: burst available after cooldown
+PASS: 14: Flame Burst damages enemies in radius
+PASS: 13: burst cost independent of target count
+PASS: 19: Coal Heart changes maximum
+PASS: non-stackable duplicate rejected
+PASS: 20: Glass Flame and Black Candle combine
+PASS: Last Spark absolute Flame threshold
+PASS: Dead Lantern light and rarity effects
+PASS: Burn deals periodic damage
+PASS: Kindling explosion damages nearby target
+PASS: Hungry Fire adds 3 to burning Shade reward
+PASS: Blast Core modifies burst radius
+PASS: Ember Dash ground damages and burns
+PASS: 21: Moth passive outside all light
+PASS: 21: Moth detects gameplay light
+PASS: 23: Watcher passive in darkness
+PASS: 23: Watcher activates through light
+PASS: 22: Shade accelerates at low Flame
+PASS: 24: Leech attaches tether
+PASS: 24: tether drains Flame periodically
+PASS: dash available for tether escape
+PASS: 25: dash breaks tether immediately
+PASS: 27: Torchbearer light weakens Shade
+PASS: Torchbearer light extinguishes on death
+PASS: Pause freezes world and run clock
+PASS: UI button available: Resume
+PASS: Pause UI resumes simulation
+PASS: 11,33: zero Flame opens Game Over
+PASS: UI button available: Retry
+PASS: 34: Retry creates clean run state
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 26: altar interaction opens choices
+PASS: UI button available: Altar1
+PASS: 26: sacrifice trades maximum Flame for reduced burst cost
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 18: reward choice appears
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: reward excludes duplicates/owned relics
+PASS: UI button available: Reward0
+PASS: 19: reward resumes gameplay
+PASS: 17: complete all pre-boss stages without deadlock
+PASS: 28: boss arena starts
+PASS: 28: four arena torches lit
+PASS: 29: phase two at 70 percent
+PASS: 30: phase two extinguishes two torches
+PASS: 29: phase three at 40 percent
+PASS: 30: phase three extinguishes remaining torches
+PASS: boss telegraph provides fair reaction window
+PASS: boss slam can be dodged
+PASS: 31-32: boss death opens Victory
+PASS: UI button available: Retry
+PASS: 35: new run after Victory resets enemies, lights and artifacts
+PASS: maximum Flame floor enforced
+PASS: ability cannot spend last Flame
+PASS: altar attack speed option
+PASS: altar cannot be reused
+PASS: altar dash explosion option
+PASS: Burning Edge does not ignite first two hits
+PASS: Burning Edge ignites actual third melee hit
+PASS: altar dash explosion deals damage
+System.InvalidOperationException: FAIL: CharacterBody2D collides with world geometry
+   at LastEmber.SmokeTests.Check(Boolean condition, String name) in C:\Users\Ninja\Documents\1\Game\Last Ember\last-ember\Scripts\Core\SmokeTests.cs:line 22
+   at LastEmber.SmokeTests.Execute() in C:\Users\Ninja\Documents\1\Game\Last Ember\last-ember\Scripts\Core\SmokeTests.cs:line 175
+   at LastEmber.SmokeTests._Ready() in C:\Users\Ninja\Documents\1\Game\Last Ember\last-ember\Scripts\Core\SmokeTests.cs:line 17

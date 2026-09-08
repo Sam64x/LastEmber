@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtifactData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Items/ArtifactData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "glass_flame"
+DisplayName = "Glass Flame"
+Description = "Max Flame −25. All direct attack damage +30%."
+Rarity = 3
+Effect = 5
+Value = 0.3

@@ -1,0 +1,82 @@
+{
+  "bpm": 80,
+  "sampleRate": 32000,
+  "motif": "A-C-E-D",
+  "originalSynthesis": true,
+  "cues": {
+    "menu": {
+      "title": "The Last Ember",
+      "bars": 32,
+      "seconds": 96.0,
+      "stems": {
+        "ambient": "res://Assets/Audio/Music/menu_ambient.ogg",
+        "melody": "res://Assets/Audio/Music/menu_melody.ogg",
+        "fire": "res://Assets/Audio/Music/menu_fire.ogg"
+      }
+    },
+    "streets": {
+      "title": "Dead Streets / Feed the Fire",
+      "bars": 64,
+      "seconds": 192.0,
+      "stems": {
+        "ambient": "res://Assets/Audio/Music/streets_ambient.ogg",
+        "melody": "res://Assets/Audio/Music/streets_melody.ogg",
+        "strings": "res://Assets/Audio/Music/streets_strings.ogg",
+        "percussion": "res://Assets/Audio/Music/streets_percussion.ogg",
+        "bass": "res://Assets/Audio/Music/streets_bass.ogg",
+        "tension": "res://Assets/Audio/Music/streets_tension.ogg",
+        "heartbeat": "res://Assets/Audio/Music/streets_heartbeat.ogg",
+        "breath": "res://Assets/Audio/Music/streets_breath.ogg",
+        "fire": "res://Assets/Audio/Music/streets_fire.ogg",
+        "fragments": "res://Assets/Audio/Music/streets_fragments.ogg"
+      }
+    },
+    "offering": {
+      "title": "The Offering / Bearer of the Torch",
+      "bars": 40,
+      "seconds": 120.0,
+      "stems": {
+        "ambient": "res://Assets/Audio/Music/offering_ambient.ogg",
+        "melody": "res://Assets/Audio/Music/offering_melody.ogg",
+        "choir": "res://Assets/Audio/Music/offering_choir.ogg",
+        "strings": "res://Assets/Audio/Music/offering_strings.ogg",
+        "percussion": "res://Assets/Audio/Music/offering_percussion.ogg",
+        "heartbeat": "res://Assets/Audio/Music/offering_heartbeat.ogg",
+        "breath": "res://Assets/Audio/Music/offering_breath.ogg",
+        "fire": "res://Assets/Audio/Music/offering_fire.ogg",
+        "fragments": "res://Assets/Audio/Music/offering_fragments.ogg"
+      }
+    },
+    "boss": {
+      "title": "The Extinguisher / One Spark Left",
+      "bars": 96,
+      "seconds": 288.0,
+      "stems": {
+        "ambient": "res://Assets/Audio/Music/boss_ambient.ogg",
+        "melody": "res://Assets/Audio/Music/boss_melody.ogg",
+        "strings": "res://Assets/Audio/Music/boss_strings.ogg",
+        "percussion": "res://Assets/Audio/Music/boss_percussion.ogg",
+        "bass": "res://Assets/Audio/Music/boss_bass.ogg",
+        "choir": "res://Assets/Audio/Music/boss_choir.ogg",
+        "tension": "res://Assets/Audio/Music/boss_tension.ogg",
+        "heartbeat": "res://Assets/Audio/Music/boss_heartbeat.ogg",
+        "breath": "res://Assets/Audio/Music/boss_breath.ogg",
+        "fire": "res://Assets/Audio/Music/boss_fire.ogg",
+        "fragments": "res://Assets/Audio/Music/boss_fragments.ogg",
+        "hope": "res://Assets/Audio/Music/boss_hope.ogg"
+      }
+    },
+    "victory": {
+      "title": "The Furnace Breathes",
+      "bars": 16,
+      "seconds": 48.0,
+      "stems": {
+        "ambient": "res://Assets/Audio/Music/victory_ambient.ogg",
+        "melody": "res://Assets/Audio/Music/victory_melody.ogg",
+        "strings": "res://Assets/Audio/Music/victory_strings.ogg",
+        "choir": "res://Assets/Audio/Music/victory_choir.ogg",
+        "fire": "res://Assets/Audio/Music/victory_fire.ogg"
+      }
+    }
+  }
+}

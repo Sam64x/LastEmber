@@ -1,0 +1,6 @@
+.tools/
+dist/
+last-ember/.godot/
+last-ember/.nuget/
+last-ember/.cli/
+last-ember/TestResults/*.png

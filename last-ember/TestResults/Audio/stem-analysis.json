@@ -1,0 +1,122 @@
+[
+  {
+    "cue": "boss",
+    "layer": "ambient",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.1585911363363266,
+    "rms": 0.053366679698228836,
+    "loopStep": 0.0,
+    "bytes": 2492521
+  },
+  {
+    "cue": "boss",
+    "layer": "melody",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.2320633977651596,
+    "rms": 0.04704286530613899,
+    "loopStep": 0.0,
+    "bytes": 1263604
+  },
+  {
+    "cue": "boss",
+    "layer": "strings",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.15502215921878815,
+    "rms": 0.040314558893442154,
+    "loopStep": 0.0,
+    "bytes": 1519109
+  },
+  {
+    "cue": "boss",
+    "layer": "percussion",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.1752166599035263,
+    "rms": 0.02036610059440136,
+    "loopStep": 0.0,
+    "bytes": 1075618
+  },
+  {
+    "cue": "boss",
+    "layer": "bass",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.10880442708730698,
+    "rms": 0.033310022205114365,
+    "loopStep": 0.0,
+    "bytes": 594207
+  },
+  {
+    "cue": "boss",
+    "layer": "choir",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.12950298190116882,
+    "rms": 0.02943156659603119,
+    "loopStep": 0.0,
+    "bytes": 2361592
+  },
+  {
+    "cue": "boss",
+    "layer": "tension",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.08523280918598175,
+    "rms": 0.0026728110387921333,
+    "loopStep": 0.0,
+    "bytes": 608262
+  },
+  {
+    "cue": "boss",
+    "layer": "heartbeat",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.08078621327877045,
+    "rms": 0.014135331846773624,
+    "loopStep": 0.0,
+    "bytes": 469663
+  },
+  {
+    "cue": "boss",
+    "layer": "breath",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.11914490163326263,
+    "rms": 0.009609305299818516,
+    "loopStep": 0.0,
+    "bytes": 426313
+  },
+  {
+    "cue": "boss",
+    "layer": "fire",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.1635962724685669,
+    "rms": 0.0022500967606902122,
+    "loopStep": 0.0,
+    "bytes": 265462
+  },
+  {
+    "cue": "boss",
+    "layer": "fragments",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.08628571778535843,
+    "rms": 0.010572661645710468,
+    "loopStep": 0.0,
+    "bytes": 769022
+  },
+  {
+    "cue": "boss",
+    "layer": "hope",
+    "frames": 9216000,
+    "seconds": 288.0,
+    "peak": 0.24276202917099,
+    "rms": 0.07084298133850098,
+    "loopStep": 0.0,
+    "bytes": 1616772
+  }
+]

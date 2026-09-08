@@ -1,0 +1,58 @@
+PLAYTEST seed 20260908 / build 0
+  00:00 stage 1 Combat, Flame 100/100
+  00:26 stage 2 Combat, Flame 100/100
+  01:00 kills 28, enemies 1, position (887.02686, 393.51617), Flame 100
+  01:05 stage 3 Reward, Flame 100/100
+  01:12 stage 4 Combat, Flame 100/100
+  02:00 kills 51, enemies 7, position (1676.5044, 697.7308), Flame 86
+  02:17 stage 5 Elite, Flame 92/120
+  02:38 stage 6 Altar, Flame 117/120
+  02:44 stage 7 Combat, Flame 105/105
+  03:00 kills 73, enemies 1, position (1516.2992, 513.1475), Flame 90
+  04:00 kills 112, enemies 2, position (875.90955, 536.20154), Flame 102
+  04:07 stage 8 Reward, Flame 105/105
+  04:12 stage 9 Combat, Flame 105/105
+  05:00 kills 148, enemies 3, position (859.8869, 512.131), Flame 105
+  05:35 stage 10 Boss, Flame 105/105
+  06:00 kills 175, enemies 1, position (992.949, 539.36804), Flame 105
+RESULT Victory: 06:51, 176 kills, 105/105 Flame
+RELICS blast_core kindling hungry_fire coal_heart ember_dash burning_edge black_candle last_spark 
+PLAYTEST seed 722 / build 1
+  00:00 stage 1 Combat, Flame 100/100
+  00:36 stage 2 Combat, Flame 120/120
+  01:00 kills 24, enemies 5, position (1002.2647, 551.79407), Flame 120
+  01:09 stage 3 Reward, Flame 118/120
+  01:14 stage 4 Combat, Flame 118/120
+  02:00 kills 51, enemies 0, position (831.9898, 311.9622), Flame 118
+  02:11 stage 5 Elite, Flame 120/120
+  02:32 stage 6 Altar, Flame 95/120
+  02:39 stage 7 Combat, Flame 95/100
+  03:00 kills 74, enemies 10, position (1477.3033, 521.4386), Flame 100
+  04:00 kills 104, enemies 10, position (419.16663, 381.80273), Flame 70
+  04:14 stage 8 Reward, Flame 49/100
+  04:21 stage 9 Combat, Flame 49/100
+  05:00 kills 139, enemies 0, position (488.05746, 301.97647), Flame 96
+  05:47 stage 10 Boss, Flame 96/100
+  06:00 kills 175, enemies 1, position (910.8325, 481.4684), Flame 96
+  07:00 kills 175, enemies 1, position (853.01025, 285.77), Flame 96
+RESULT Victory: 07:27, 176 kills, 99/100 Flame
+RELICS coal_heart kindling ember_dash blast_core hungry_fire burning_edge last_spark black_candle 
+PLAYTEST seed 190823 / build 2
+  00:00 stage 1 Combat, Flame 100/100
+  00:39 stage 2 Combat, Flame 75/75
+  01:00 kills 24, enemies 0, position (1121.2498, 272.58453), Flame 75
+  01:17 stage 3 Reward, Flame 75/75
+  01:22 stage 4 Combat, Flame 75/75
+  02:00 kills 46, enemies 5, position (890.50195, 359.94574), Flame 58
+  02:29 stage 5 Elite, Flame 62/75
+  02:48 stage 6 Altar, Flame 95/95
+  02:55 stage 7 Combat, Flame 80/80
+  03:00 kills 65, enemies 9, position (702.63855, 557.113), Flame 80
+  04:00 kills 104, enemies 0, position (627.2739, 323.55313), Flame 36
+  04:16 stage 8 Reward, Flame 39/80
+  04:23 stage 9 Combat, Flame 39/80
+  05:00 kills 139, enemies 12, position (483.10992, 502.16956), Flame 80
+  05:52 stage 10 Boss, Flame 80/80
+  06:00 kills 175, enemies 1, position (1090.0925, 431.99014), Flame 80
+RESULT Victory: 06:57, 176 kills, 80/80 Flame
+RELICS glass_flame hungry_fire black_candle last_spark coal_heart burning_edge ember_dash kindling 

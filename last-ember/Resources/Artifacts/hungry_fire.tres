@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "hungry_fire"
 DisplayName = "Hungry Fire"
-Description = "Killing a burning enemy restores 3 extra Flame."
+Description = "Embers dropped by burning enemies restore 3 extra Flame. Drop chance remains 28%."
 Rarity = 2
 Effect = 8
 Value = 3

@@ -28,6 +28,7 @@ public partial class RunManager : Node
     public List<ArtifactData> Artifacts { get; } = new();
     public List<ArtifactData> Offered { get; } = new();
     public bool TestMode { get; private set; }
+    public bool ShrineAvailable => _stageResolved && !_roomRewardTaken && CurrentStage!=StageKind.Altar && CurrentStage!=StageKind.Boss && StageIndex>0;
     private Node2D _world = null!, _transient = null!;
     private Camera2D _camera = null!;
     private readonly RandomNumberGenerator _rng = new();
@@ -62,7 +63,7 @@ public partial class RunManager : Node
         KeyAction("left",Key.A);KeyAction("right",Key.D);KeyAction("up",Key.W);KeyAction("down",Key.S);
         KeyAction("dash",Key.Space);KeyAction("pause",Key.Escape);KeyAction("interact",Key.E);
         KeyAction("reveal",Key.Q);
-        foreach(var pair in new[] {("melee",MouseButton.Left),("burst",MouseButton.Right)})
+        foreach(var pair in new[] {("melee",MouseButton.Left)})
         { if(!InputMap.HasAction(pair.Item1)) InputMap.AddAction(pair.Item1); InputMap.ActionAddEvent(pair.Item1,new InputEventMouseButton { ButtonIndex=pair.Item2 }); }
     }
     public override void _UnhandledInput(InputEvent input)
@@ -70,8 +71,9 @@ public partial class RunManager : Node
         if(input.IsActionPressed("pause")) { TogglePause(); GetViewport().SetInputAsHandled(); }
         if(input.IsActionPressed("interact") && Playing)
         {
-            if(CurrentStage==StageKind.Altar && Player.Position.DistanceTo(new Vector2(960,556))<150 && !_stageResolved) OpenAltar();
-            else if(Room.Cleared && Player.Position.X>1670) AdvanceStage();
+            if(ShrineAvailable && Player.Position.DistanceTo(Room.ShrinePosition)<90) OpenRewards();
+            else if(CurrentStage==StageKind.Altar && Player.Position.DistanceTo(Room.Bounds.GetCenter())<110 && !_stageResolved) OpenAltar();
+            else if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<100) AdvanceStage();
         }
     }
     private void NewWorld()
@@ -109,16 +111,19 @@ public partial class RunManager : Node
         Enemies.Clear();Player.ResetForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
         _transient=new Node2D();_world.AddChild(_transient);
         Room=ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn").Instantiate<Room>();
-        Room.Run=this;Room.Layout=_rng.RandiRange(0,7);Room.BossArena=CurrentStage==StageKind.Boss;
+        Room.Run=this;Room.Layout=StageIndex<=3?StageIndex%8:_rng.RandiRange(0,7);Room.BossArena=CurrentStage==StageKind.Boss;
         _world.AddChild(Room);_world.MoveChild(Room,1);
-        Player.Position=new Vector2(250,556);Player.Velocity=Vector2.Zero;
+        Player.Position=Room.EntrancePosition;Player.Velocity=Vector2.Zero;
         _stageResolved=false;_roomRewardTaken=false;_clearDelay=1;_waveDelay=2;
-        _wavesRemaining=CurrentStage==StageKind.Combat?2+StageIndex/3:0;
+        _wavesRemaining=CurrentStage==StageKind.Combat&&StageIndex>=3?1:0;
         Hud.Toast(CurrentStage switch {StageKind.Elite=>"A STOLEN SUN • TORCHBEARER",StageKind.Altar=>"THE ALTAR • APPROACH AND PRESS E",StageKind.Boss=>"THE FURNACE • THE EXTINGUISHER",StageKind.Reward=>"A MOMENT OF WARMTH",_=>$"DISTRICT {StageIndex+1:00} • CLEAR THE ASH"});
         if(CurrentStage==StageKind.Boss) Spawn(EnemyKind.Boss,new Vector2(1390,556));
-        else if(CurrentStage==StageKind.Elite) { Spawn(EnemyKind.Torchbearer,new Vector2(1350,550));SpawnWave(4); }
-        else if(CurrentStage==StageKind.Combat) SpawnWave(5+StageIndex);
-        else if(CurrentStage==StageKind.Reward) { _stageResolved=true;OpenRewards(); }
+        else if(CurrentStage==StageKind.Elite) { Spawn(EnemyKind.Torchbearer,Room.MapPoint(new Vector2(1350,550)));SpawnWave(3); }
+        else if(CurrentStage==StageKind.Combat && StageIndex>0) SpawnWave(StageIndex==1?2:4+StageIndex/3);
+        else if(CurrentStage==StageKind.Reward) { _stageResolved=true;Room.QueueRedraw(); }
+        if(StageIndex==0) { _stageResolved=true;_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Hud.Toast("WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE"); }
+        else if(StageIndex==1)Hud.Toast("Q • LIGHT SLOWS THE SHADES • COSTS 5 FLAME");
+        else if(StageIndex==3)Hud.Toast("LISTEN • SOME CREATURES ANSWER THE LIGHT");
     }
     public Enemy Spawn(EnemyKind kind,Vector2 position)
     {
@@ -133,10 +138,10 @@ public partial class RunManager : Node
         {
             Vector2 position=new(1500,800);
             for(int attempt=0;attempt<100;attempt++)
-            { position=new Vector2(_rng.RandfRange(340,1700),_rng.RandfRange(240,860)); if(Room.IsFree(position)&&position.DistanceTo(Player.Position)>320) break; }
-            if(!Room.IsFree(position)||position.DistanceTo(Player.Position)<220) position=new Vector2(1690,250+i*45);
-            int maximum=StageIndex==0?1:StageIndex==1?2:4;
-            Spawn((EnemyKind)_rng.RandiRange(0,maximum),position);
+            { position=new Vector2(_rng.RandfRange(Room.Bounds.Position.X+65,Room.Bounds.End.X-65),_rng.RandfRange(Room.Bounds.Position.Y+65,Room.Bounds.End.Y-65)); if(Room.IsFree(position)&&position.DistanceTo(Player.Position)>320) break; }
+            if(!Room.IsFree(position)||position.DistanceTo(Player.Position)<220) continue;
+            EnemyKind[] types=StageIndex==1?new[]{EnemyKind.Shade}:StageIndex==3?new[]{EnemyKind.Moth,EnemyKind.Watcher,EnemyKind.Shade}:new[]{EnemyKind.Shade,EnemyKind.Moth,EnemyKind.Watcher,EnemyKind.Stalker};
+            Spawn(types[i%types.Length],position);
         }
     }
     public override void _Process(double delta)
@@ -170,7 +175,7 @@ public partial class RunManager : Node
                 if(_clearDelay<=0) CompleteRoom();
             }
         }
-        if(Room.Cleared && Player.Position.X>1775 && Mathf.Abs(Player.Position.Y-554)<85) AdvanceStage();
+        if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<44) AdvanceStage();
     }
     public bool IsLit(Vector2 position)
     {
@@ -190,20 +195,21 @@ public partial class RunManager : Node
     public void OnEnemyKilled(Enemy enemy,bool burning)
     {
         Enemies.Remove(enemy);Kills++;
-        float heal=enemy.Kind switch{EnemyKind.Moth=>2,EnemyKind.Shade=>4,EnemyKind.Leech=>5,EnemyKind.Torchbearer=>12,EnemyKind.Boss=>0,_=>3};
-        if(burning)heal+=Player.Build.Get(ArtifactEffect.BurnHeal);
-        Player.Flame.Heal(heal);
+        if(enemy.Kind!=EnemyKind.Boss && _rng.Randf()<.28f)
+        {
+            float amount=_rng.RandiRange(3,5);
+            if(burning)amount+=Player.Build.Get(ArtifactEffect.BurnHeal);
+            _transient.AddChild(new EmberPickup {Run=this,Position=enemy.Position,Amount=amount});
+        }
         Fx.Sparks(enemy.Position,new Color(1,.48f,.13f),20);
-        if(heal>0)Fx.Text(enemy.Position,$"+{heal:0} FLAME",new Color(1,.64f,.25f));
         if(burning&&Player.Build.Has(ArtifactEffect.BurnExplosion))Explode(enemy.Position,95,18,false);
         if(enemy.Kind==EnemyKind.Boss)EndRun(true);
     }
     public void Shake(float amount)=>_shake=Mathf.Max(_shake,amount);
     private void CompleteRoom()
     {
-        _stageResolved=true;Room.Cleared=true;Room.QueueRedraw();Audio.Play("reward");
-        // One reward per completed encounter; no farming by walking back through a door.
-        OpenRewards();
+        _stageResolved=true;Room.QueueRedraw();Audio.Play("reward");
+        Hud.Toast("EMBER SHRINE • RESTORE OR CLAIM A RELIC • E TO CHOOSE");
     }
     public void AdvanceStage()
     {
@@ -214,10 +220,10 @@ public partial class RunManager : Node
     }
     public void OpenRewards()
     {
-        if(_roomRewardTaken)return;
+        if(!Playing||!ShrineAvailable||Player.Position.DistanceTo(Room.ShrinePosition)>=90)return;
         Offered.Clear();
         var pool=new List<ArtifactData>();
-        foreach(var item in Artifacts)if(item.Stackable||!Player.Build.Owns(item.Id))pool.Add(item);
+        foreach(var item in Artifacts)if(item.Effect!=ArtifactEffect.BurstRadius&&(item.Stackable||!Player.Build.Owns(item.Id)))pool.Add(item);
         while(Offered.Count<3&&pool.Count>0)
         {
             float total=0; foreach(var item in pool)total+=RewardWeight(item);
@@ -225,7 +231,6 @@ public partial class RunManager : Node
             foreach(var item in pool){roll-=RewardWeight(item);if(roll<=0){chosen=item;break;}}
             Offered.Add(chosen);pool.Remove(chosen);
         }
-        if(Offered.Count==0){_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Hud.Toast("ALL RELICS CLAIMED • THE EXIT IS OPEN");return;}
         State=RunState.Reward;GetTree().Paused=true;Hud.ShowRewards();
     }
     public float RewardWeight(ArtifactData item)=>Player.Build.Has(ArtifactEffect.DarkRewards)?1+item.Rarity*1.5f:4-item.Rarity*.65f;
@@ -235,6 +240,13 @@ public partial class RunManager : Node
         if(!Player.Build.Apply(Offered[index],Player.Flame))return false;
         _roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Offered.Clear();
         State=RunState.Playing;GetTree().Paused=false;Hud.ShowHud();Audio.Play("reward");Hud.Toast("RELIC BOUND • CROSS THE EASTERN GATE");return true;
+    }
+    public bool ChooseRestore()
+    {
+        if(State!=RunState.Reward||_roomRewardTaken)return false;
+        Player.Flame.Heal(20);_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Offered.Clear();
+        State=RunState.Playing;GetTree().Paused=false;Hud.ShowHud();Audio.Play("reward");
+        Hud.Toast("FLAME RESTORED • THE RELICS RETURN TO ASH");return true;
     }
     public void OpenAltar()
     {

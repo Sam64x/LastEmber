@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "coal_heart"
 DisplayName = "Coal Heart"
-Description = "Max Flame +20. Restore 20 Flame when claimed."
+Description = "Max Flame +20. Increases capacity without restoring current Flame."
 Rarity = 1
 Effect = 0
 Value = 20

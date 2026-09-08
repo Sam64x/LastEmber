@@ -9,7 +9,7 @@ public partial class GameAudio : Node
 {
     private readonly Dictionary<string, AudioStreamWav> _sounds = new();
     private readonly AudioStreamPlayer[] _voices = new AudioStreamPlayer[8];
-    private readonly AudioStreamPlayer2D[] _spatial = new AudioStreamPlayer2D[8];
+    private readonly AudioStreamPlayer2D[] _spatial = new AudioStreamPlayer2D[16];
     private readonly Dictionary<string,float> _lastPlayed=new();
     private int _voice;
     private int _spatialVoice;
@@ -23,8 +23,9 @@ public partial class GameAudio : Node
         for (int i = 0; i < _voices.Length; i++)
         {
             _voices[i] = new AudioStreamPlayer { VolumeDb = -15,Bus="SFX" }; AddChild(_voices[i]);
-            _spatial[i]=new AudioStreamPlayer2D {Bus="SFX",VolumeDb=-19,MaxDistance=1100,Attenuation=1.6f};AddChild(_spatial[i]);
         }
+        for(int i=0;i<_spatial.Length;i++)
+        { _spatial[i]=new AudioStreamPlayer2D {Bus="SFX",VolumeDb=-19,MaxDistance=1400,Attenuation=1.2f};AddChild(_spatial[i]); }
         _sounds["swing"] = Tone(250, 80, .12f, .6f);
         _sounds["dash"] = Tone(400, 90, .2f, .4f);
         _sounds["burst"] = Tone(100, 35, .45f, .7f);
@@ -40,6 +41,9 @@ public partial class GameAudio : Node
         _sounds["moth"]=Texture(.4f,400,700,.94f,13);
         _sounds["siphon"]=Texture(.5f,180,78,.7f,15);
         _sounds["reveal"]=Texture(1.1f,220,440,.55f,37);
+        _sounds["stalker_step"]=Texture(.3f,72,29,.6f,58);
+        _sounds["watcher_shot"]=Texture(.24f,580,100,.3f,61);
+        _sounds["trap"]=Texture(.45f,950,110,.8f,62);
         SetVolume(Volume);
     }
     public override void _Process(double delta){_time+=(float)delta;}

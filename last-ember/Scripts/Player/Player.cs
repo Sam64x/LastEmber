@@ -11,9 +11,9 @@ public partial class Player : CharacterBody2D, IDamageable
     [Export] public float RevealCost {get;set;}=5;
     [Export] public float RevealCooldownSeconds {get;set;}=10;
     [Export] public float RevealRadius {get;set;}=1900;
-    [Export] public float RevealExpandSeconds {get;set;}=.65f;
-    [Export] public float RevealHoldSeconds {get;set;}=1.35f;
-    [Export] public float RevealFadeSeconds {get;set;}=2.25f;
+    [Export] public float RevealExpandSeconds {get;set;}=.6f;
+    [Export] public float RevealHoldSeconds {get;set;}=.9f;
+    [Export] public float RevealFadeSeconds {get;set;}=2f;
     public FlamePool Flame { get; } = new();
     public BuildStats Build { get; } = new();
     public EmberLight Light { get; private set; } = null!;
@@ -40,6 +40,7 @@ public partial class Player : CharacterBody2D, IDamageable
         CollisionLayer = 2; CollisionMask = 1;
         AddChild(new CollisionShape2D { Shape = new CircleShape2D { Radius = 15 } });
         Light = new EmberLight(); AddChild(Light);
+        var listener = new AudioListener2D(); AddChild(listener); listener.MakeCurrent();
         RevealLight=new EmberLight {Name="RevealLight",Lit=false,Tint=new Color(1,.85f,.63f),Intensity=.95f};AddChild(RevealLight);
         Flame.Emptied += () => Run.EndRun(false);
         Flame.Changed+=OnFlameChanged;
@@ -61,11 +62,10 @@ public partial class Player : CharacterBody2D, IDamageable
             if (aim.LengthSquared() > 1) Aim = aim.Normalized();
             if (Input.IsActionJustPressed("dash")) TryDash(input);
             if (Input.IsActionJustPressed("reveal")) TryReveal();
-            if(_waitForMouseRelease)_waitForMouseRelease=Input.IsActionPressed("melee")||Input.IsActionPressed("burst");
+            if(_waitForMouseRelease)_waitForMouseRelease=Input.IsActionPressed("melee");
             else
             {
                 if (Input.IsActionPressed("melee")) TryMelee();
-                if (Input.IsActionJustPressed("burst")) TryBurst();
             }
         }
         if (Dashing)
@@ -85,7 +85,8 @@ public partial class Player : CharacterBody2D, IDamageable
         MoveAndSlide();
         _stepClock-=dt;
         if(!Dashing&&Velocity.LengthSquared()>1000&&_stepClock<=0){_stepClock=.42f;Run.Audio.PlayAt("step",Position,.65f);}
-        Position = new Vector2(Mathf.Clamp(Position.X, 112, 1808), Mathf.Clamp(Position.Y, 175, 936));
+        var bounds=Run.Room.Bounds.Grow(-16);
+        Position = new Vector2(Mathf.Clamp(Position.X, bounds.Position.X, bounds.End.X), Mathf.Clamp(Position.Y, bounds.Position.Y, bounds.End.Y));
         Light.TargetRadius = FlameLight.Radius(Flame.Current,Build.LightMultiplier);
         UpdateReveal(dt);
         QueueRedraw();
@@ -107,6 +108,7 @@ public partial class Player : CharacterBody2D, IDamageable
         RevealCooldown=RevealCooldownSeconds;Revealing=true;_revealTime=0;_revealStart=Light.Radius;
         RevealLight.ResetRadius(_revealStart);RevealLight.Energy=RevealLight.Intensity;RevealLight.Lit=true;
         if(!Run.Lights.Contains(RevealLight))Run.Lights.Add(RevealLight);
+        foreach(var enemy in Run.Enemies) enemy.HearReveal();
         Run.Audio.Play("reveal");Run.Fx.Sparks(Position,new Color(1,.85f,.55f),14);
         return true;
     }
@@ -116,12 +118,12 @@ public partial class Player : CharacterBody2D, IDamageable
         _revealTime+=dt;
         float fadeStart=RevealExpandSeconds+RevealHoldSeconds;
         if(_revealTime<RevealExpandSeconds)
-            RevealLight.TargetRadius=Mathf.Lerp(_revealStart,RevealRadius,Mathf.SmoothStep(0,1,_revealTime/RevealExpandSeconds));
-        else if(_revealTime<fadeStart)RevealLight.TargetRadius=RevealRadius;
+            RevealLight.ResetRadius(Mathf.Lerp(_revealStart,RevealRadius,Mathf.SmoothStep(0,1,_revealTime/RevealExpandSeconds)));
+        else if(_revealTime<fadeStart)RevealLight.ResetRadius(RevealRadius);
         else
         {
             float fade=Mathf.SmoothStep(0,1,Mathf.Clamp((_revealTime-fadeStart)/RevealFadeSeconds,0,1));
-            RevealLight.TargetRadius=Mathf.Lerp(RevealRadius,Light.TargetRadius,fade);
+            RevealLight.ResetRadius(Mathf.Lerp(RevealRadius,Light.TargetRadius,fade));
             RevealLight.Energy=RevealLight.Intensity*(1-fade);
             if(_revealTime>=fadeStart+RevealFadeSeconds)ResetForRoom();
         }
@@ -155,11 +157,8 @@ public partial class Player : CharacterBody2D, IDamageable
     }
     public bool TryBurst()
     {
-        if (Dead || !Run.Playing || BurstCooldown > 0 || !Flame.Spend(Build.BurstCost)) return false;
-        BurstCooldown = 1.7f;
-        Run.Explode(Position, 175 * (1 + Build.Get(ArtifactEffect.BurstRadius)), BurstDamage * Build.DamageMultiplier(Flame), false);
-        Run.Shake(8); Run.Audio.Play("burst");
-        return true;
+        // Retained for older development tools; Burst is disabled in this MVP.
+        return false;
     }
     public void TakeDamage(DamageInfo hit)
     {

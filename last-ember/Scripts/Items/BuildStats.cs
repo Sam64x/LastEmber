@@ -22,7 +22,7 @@ public sealed class BuildStats
     public bool Apply(ArtifactData data, FlamePool flame)
     {
         if (!data.Stackable && Owns(data.Id)) return false;
-        if (data.Effect == ArtifactEffect.MaxFlame && !flame.ChangeMaximum(data.Value, true)) return false;
+        if (data.Effect == ArtifactEffect.MaxFlame && !flame.ChangeMaximum(data.Value)) return false;
         if (data.Effect == ArtifactEffect.Glass && !flame.ChangeMaximum(-25)) return false;
         _effects[data.Effect] = Get(data.Effect) + data.Value;
         Artifacts.Add(data);
@@ -33,7 +33,7 @@ public sealed class BuildStats
         if (AltarUsed || option < 0 || option > 2) return false;
         if (!flame.ChangeMaximum(-new[] { 15, 20, 30 }[option])) return false;
         if (option == 0) AttackSpeed *= 1.25f;
-        if (option == 1) BurstCost = 6;
+        if (option == 1) _effects[ArtifactEffect.LowSpeed] = Get(ArtifactEffect.LowSpeed) + .25f;
         if (option == 2) DashExplosion = true;
         AltarUsed = true;
         return true;

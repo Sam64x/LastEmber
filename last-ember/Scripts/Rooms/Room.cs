@@ -10,6 +10,11 @@ public partial class Room : Node2D
     public int Layout { get; set; }
     public bool BossArena { get; set; }
     public bool Cleared { get; set; }
+    public Rect2 Bounds => BossArena ? Interior : new Rect2(360,296,1200,520);
+    public Vector2 EntrancePosition => new(Bounds.Position.X+90,Bounds.GetCenter().Y);
+    public Vector2 ExitPosition => new(Bounds.End.X-24,Bounds.GetCenter().Y);
+    public Vector2 ShrinePosition => new(Bounds.End.X-130,Bounds.GetCenter().Y);
+    public Vector2 MapPoint(Vector2 point) => BossArena?point:Bounds.Position+(point-Interior.Position)*Bounds.Size/Interior.Size;
     public List<Rect2> Obstacles { get; } = new();
     public List<EmberLight> Torches { get; } = new();
     private readonly List<Vector2> _chips = new();
@@ -34,10 +39,19 @@ public partial class Room : Node2D
     {
         ZIndex = -10;
         _rng.Seed = (ulong)(Layout + 991);
-        for (int i = 0; i < 240; i++) _chips.Add(new Vector2(_rng.RandfRange(115,1800),_rng.RandfRange(179,929)));
-        AddWall(R(70,134,1780,26)); AddWall(R(70,952,1780,26));
-        AddWall(R(70,160,26,792)); AddWall(R(1824,160,26,792));
-        if (!BossArena) foreach (var rect in LayoutObstacles(Layout)) { Obstacles.Add(rect); AddWall(rect); }
+        for (int i = 0; i < 180; i++) _chips.Add(new Vector2(_rng.RandfRange(Bounds.Position.X+10,Bounds.End.X-10),_rng.RandfRange(Bounds.Position.Y+10,Bounds.End.Y-10)));
+        AddWall(R(Bounds.Position.X-26,Bounds.Position.Y-26,Bounds.Size.X+52,26));
+        AddWall(R(Bounds.Position.X-26,Bounds.End.Y,Bounds.Size.X+52,26));
+        AddWall(R(Bounds.Position.X-26,Bounds.Position.Y,26,Bounds.Size.Y));
+        AddWall(R(Bounds.End.X,Bounds.Position.Y,26,Bounds.Size.Y));
+        if (!BossArena && Run.StageIndex>0) foreach (var rect in LayoutObstacles(Layout))
+        { var compact=new Rect2(MapPoint(rect.Position),rect.Size*Bounds.Size/Interior.Size);Obstacles.Add(compact);AddWall(compact); }
+        AddChild(new WallMemory {Room=this,ZIndex=1});
+        if(!BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat)
+        {
+            foreach(var point in new[]{MapPoint(new Vector2(780,330)),MapPoint(new Vector2(1160,780))})
+                if(IsFree(point,35))AddChild(new AshTrap {Run=Run,Position=point,ZIndex=12});
+        }
         _navigation.Region = new Rect2I(0,0,36,16);
         _navigation.CellSize = new Vector2(48,48);
         _navigation.Offset = new Vector2(120,184);
@@ -83,7 +97,7 @@ public partial class Room : Node2D
     }
     public bool IsFree(Vector2 position, float margin = 45)
     {
-        if (!Interior.Grow(-margin).HasPoint(position)) return false;
+        if (!Bounds.Grow(-margin).HasPoint(position)) return false;
         foreach (var obstacle in Obstacles) if (obstacle.Grow(margin).HasPoint(position)) return false;
         return true;
     }
@@ -134,20 +148,20 @@ public partial class Room : Node2D
     public override void _ExitTree(){_navigation.Dispose();}
     public override void _Draw()
     {
-        DrawRect(new Rect2(0,0,1920,1080),new Color(.035f,.04f,.055f));
-        DrawRect(Interior.Grow(20),new Color(.18f,.16f,.16f));
-        DrawRect(Interior,new Color(.105f,.112f,.128f));
-        for (int y = 160; y < 952; y += 66)
-            for (int x = 96; x < 1824; x += 96)
+        DrawRect(new Rect2(0,0,1920,1080),Colors.Black);
+        DrawRect(Bounds.Grow(20),new Color(.18f,.16f,.16f));
+        DrawRect(Bounds,new Color(.105f,.112f,.128f));
+        for (int y = (int)Bounds.Position.Y; y < Bounds.End.Y; y += 66)
+            for (int x = (int)Bounds.Position.X; x < Bounds.End.X; x += 96)
             {
                 float tone = ((x / 96 + y / 66 + Layout) % 4) * .007f;
-                DrawRect(new Rect2(x+2,y+2,92,62),new Color(.12f+tone,.126f+tone,.141f+tone));
-                DrawLine(new Vector2(x+3,y+3),new Vector2(x+90,y+3),new Color(.17f,.17f,.18f),1);
+                DrawRect(new Rect2(x+2,y+2,Mathf.Min(92,Bounds.End.X-x-2),Mathf.Min(62,Bounds.End.Y-y-2)),new Color(.12f+tone,.126f+tone,.141f+tone));
+                DrawLine(new Vector2(x+3,y+3),new Vector2(Mathf.Min(x+90,Bounds.End.X-2),y+3),new Color(.17f,.17f,.18f),1);
             }
-        DrawRect(Interior.Grow(-21),new Color(.27f,.23f,.20f),false,2);
-        DrawRect(Interior.Grow(-27),new Color(.17f,.16f,.17f),false,1);
+        DrawRect(Bounds.Grow(-21),new Color(.27f,.23f,.20f),false,2);
+        DrawRect(Bounds.Grow(-27),new Color(.17f,.16f,.17f),false,1);
         foreach (var chip in _chips) DrawLine(chip,chip+new Vector2(7,3),new Color(.22f,.21f,.20f,.5f),1);
-        var center = new Vector2(960,556);
+        var center = Bounds.GetCenter();
         DrawArc(center,230,0,Mathf.Tau,96,new Color(.24f,.21f,.20f,.48f),3,true);
         DrawArc(center,218,0,Mathf.Tau,96,new Color(.21f,.19f,.19f,.48f),1,true);
         for(int i=0;i<12;i++)
@@ -163,10 +177,18 @@ public partial class Room : Node2D
             DrawRect(new Rect2(rect.Position+new Vector2(7,-5),rect.Size-new Vector2(14,14)),new Color(.22f,.22f,.24f));
             DrawLine(rect.Position-new Vector2(0,12),rect.Position+new Vector2(rect.Size.X,-12),new Color(.4f,.37f,.32f),3);
         }
-        var gate = new Rect2(1805,488,35,132);
+        var gate = new Rect2(Bounds.End.X-19,center.Y-66,35,132);
         DrawRect(gate,new Color(.12f,.09f,.10f));
-        for(int i=0;i<5;i++) DrawLine(new Vector2(1810+i*6,490),new Vector2(1810+i*6,618),Cleared?new Color(1,.58f,.2f):new Color(.36f,.25f,.24f),3);
-        if (Cleared) { DrawArc(new Vector2(1774,553),37,-1.2f,1.2f,24,new Color(1,.62f,.25f),3,true); }
+        for(int i=0;i<5;i++) DrawLine(new Vector2(gate.Position.X+5+i*6,gate.Position.Y+2),new Vector2(gate.Position.X+5+i*6,gate.End.Y-2),Cleared?new Color(1,.58f,.2f):new Color(.36f,.25f,.24f),3);
+        if (Cleared) { DrawArc(ExitPosition-new Vector2(18,0),37,-1.2f,1.2f,24,new Color(1,.62f,.25f),3,true); }
+        if(Run.ShrineAvailable)
+        {
+            var p=ShrinePosition;
+            DrawRect(new Rect2(p-new Vector2(28,15),new Vector2(56,38)),new Color(.35f,.26f,.2f));
+            DrawRect(new Rect2(p-new Vector2(30,24),new Vector2(60,14)),new Color(.55f,.39f,.24f));
+            DrawLine(p-new Vector2(0,24),p+new Vector2(0,22),new Color(.8f,.58f,.3f),4);
+            DrawCircle(p-new Vector2(0,34),8,new Color(1,.65f,.3f));
+        }
         foreach(var torch in Torches)
         {
             var p=torch.Position;

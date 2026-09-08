@@ -9,7 +9,7 @@ public partial class Hud : CanvasLayer
     public Control Root { get; private set; } = null!;
     public Control? Modal { get; private set; }
     private Control _hud = null!;
-    private Label _flame=null!,_room=null!,_dash=null!,_burst=null!,_reveal=null!,_relics=null!,_toast=null!,_bossName=null!,_prompt=null!;
+    private Label _flame=null!,_room=null!,_dash=null!,_reveal=null!,_relics=null!,_toast=null!,_bossName=null!,_prompt=null!;
     private ProgressBar _flameBar=null!,_dashBar=null!,_bossBar=null!;
     private float _toastTime;
     public static readonly Color Amber=new(1,.62f,.28f), Cream=new(.94f,.89f,.79f), Muted=new(.57f,.56f,.56f);
@@ -26,10 +26,9 @@ public partial class Hud : CanvasLayer
         _room=Text(_hud,"",new Rect2(820,27,305,62),23,Cream);
         _dash=Text(_hud,"",new Rect2(1150,33,230,36),21,Cream);
         _dashBar=Bar(_hud,new Rect2(1150,78,182,5),new Color(.72f,.71f,.77f));
-        _burst=Text(_hud,"",new Rect2(1410,33,230,64),20,Amber);
-        _reveal=Text(_hud,"",new Rect2(1650,33,240,64),20,Cream);
+        _reveal=Text(_hud,"",new Rect2(1450,33,410,64),20,Cream);
         _relics=Text(_hud,"",new Rect2(62,995,1260,80),17,Muted,true);
-        Text(_hud,"WASD  MOVE     LMB  STRIKE     RMB  BURST\nSPACE  DASH    Q  REVEAL    E  USE    ESC  PAUSE",new Rect2(1390,1004,490,56),17,Muted);
+        Text(_hud,"WASD  MOVE     LMB  STRIKE     SPACE  DASH\nQ  REVEAL     E  USE     ESC  PAUSE",new Rect2(1390,1004,490,56),17,Muted);
         _toast=Text(_hud,"",new Rect2(350,150,1220,52),27,Cream);_toast.HorizontalAlignment=HorizontalAlignment.Center;
         _bossName=Text(_hud,"",new Rect2(620,861,680,40),24,Cream);_bossName.HorizontalAlignment=HorizontalAlignment.Center;
         _bossBar=Bar(_hud,new Rect2(620,908,680,9),new Color(.82f,.25f,.18f));
@@ -45,7 +44,6 @@ public partial class Hud : CanvasLayer
         _room.Text=$"{Run.StageIndex+1:00} / 10   ·   {Run.CurrentStage.ToString().ToUpperInvariant()}\n{Run.Kills} FALLEN     {TimeText(Run.RunTime)}";
         _dash.Text=player.DashCooldown<=0?"SPACE   DASH READY":$"SPACE   {player.DashCooldown:0.0}s";
         _dashBar.Value=(1-player.DashCooldown)*100;
-        _burst.Text=$"RMB   −{player.Build.BurstCost:0} FLAME\n"+(player.BurstCooldown<=0?"BURST READY":$"REKINDLING  {player.BurstCooldown:0.0}s");
         _reveal.Text=$"Q   REVEAL  −{player.RevealCost:0}\n"+(player.RevealCooldown<=0?"LIGHT THE DARK":$"RECHARGING  {player.RevealCooldown:0.0}s");
         string relics="";foreach(var artifact in player.Build.Artifacts)relics+=(relics.Length>0?"  /  ":"")+artifact.DisplayName;
         _relics.Text=$"RELICS  {player.Build.Artifacts.Count:00}"+(player.Build.AltarUsed?"    •    SACRIFICE BOUND":"")+"\n"+(relics.Length==0?"Carry a little light into the dark.":relics);
@@ -53,7 +51,9 @@ public partial class Hud : CanvasLayer
         _bossBar.Visible=boss!=null;_bossName.Visible=boss!=null;
         if(boss!=null){_bossBar.Value=boss.Health/boss.MaxHealth*100;_bossName.Text=$"THE EXTINGUISHER    /    PHASE {boss.Phase}";}
         if(Run.Playing){_toastTime-=(float)delta;_toast.Visible=_toastTime>0;}
-        _prompt.Text=Run.Room.Cleared?"EASTERN GATE OPEN   →   WALK THROUGH OR PRESS E NEAR THE EXIT":Run.CurrentStage==StageKind.Altar?"APPROACH THE ALTAR   ·   E TO OFFER A SACRIFICE":"";
+        bool nearShrine=Run.ShrineAvailable&&player.Position.DistanceTo(Run.Room.ShrinePosition)<90;
+        bool nearAltar=Run.CurrentStage==StageKind.Altar&&player.Position.DistanceTo(Run.Room.Bounds.GetCenter())<110;
+        _prompt.Text=nearShrine?"E • EMBER SHRINE • RESTORE OR ARTIFACT":Run.Room.Cleared?"EASTERN GATE OPEN   →":nearAltar?"E • ALTAR OF SACRIFICE":"";
     }
     public static string TimeText(float seconds)=>$"{(int)seconds/60:00}:{(int)seconds%60:00}";
     public void Toast(string text){_toast.Text=text;_toastTime=3.5f;_toast.Visible=true;}
@@ -80,15 +80,15 @@ public partial class Hud : CanvasLayer
         Button(root,"START RUN     →",new Rect2(145,795,425,80),()=>Run.StartRun(),true,"StartRun");
         Button(root,"QUIT",new Rect2(590,795,190,80),()=>GetTree().Quit(),false,"Quit");
         Button(root,"AUDIO",new Rect2(805,795,220,80),ShowAudio,false,"AudioSettings");
-        Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nRMB  FLAME BURST    /    SPACE  DASH    /    Q  REVEAL    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
+        Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  REVEAL    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
         Text(root,"01   /   THE FALLEN CITY",new Rect2(1370,976,420,38),18,Muted);
     }
     public void ShowRewards()
     {
         var root=Overlay();
-        Text(root,"A LITTLE WARMTH REMAINS",new Rect2(235,170,1450,42),21,Amber);
-        Text(root,"Choose what you carry.",new Rect2(228,229,1460,86),62,Cream);
-        Text(root,"One relic binds to your flame. The others return to ash.",new Rect2(235,326,1400,52),25,Muted);
+        Text(root,$"EMBER SHRINE    •    {Run.Player.Flame.Current:0} / {Run.Player.Flame.Maximum:0} FLAME",new Rect2(235,170,1450,42),21,Amber);
+        Text(root,"Warmth or strength?",new Rect2(228,229,1460,86),62,Cream);
+        Text(root,"Restore 20 Flame OR bind one artifact. You can choose only once.",new Rect2(235,326,1400,52),25,Muted);
         for(int i=0;i<Run.Offered.Count;i++)
         {
             int selected=i;var item=Run.Offered[i];float x=235+i*490;
@@ -100,6 +100,7 @@ public partial class Hud : CanvasLayer
             Text(root,item.Description,new Rect2(x+28,611,400,109),23,Muted,true);
             Button(root,"BIND RELIC   +",new Rect2(x+28,747,404,60),()=>Run.ChooseReward(selected),true,$"Reward{selected}");
         }
+        Button(root,"RESTORE  +20 FLAME  •  FORGO ARTIFACT",new Rect2(545,878,830,70),()=>Run.ChooseRestore(),false,"RestoreFlame");
     }
     public void ShowAltar()
     {
@@ -108,7 +109,7 @@ public partial class Hud : CanvasLayer
         Text(root,"Power has a price.",new Rect2(228,229,1460,86),62,Cream);
         Text(root,"Give up maximum Flame for the rest of this run. Choose once, or walk away.",new Rect2(235,326,1480,52),25,Muted);
         string[] names={"QUICKENED ASH","HOLLOW CORE","RUPTURE"};
-        string[] desc={"−15 maximum Flame\n+25% attack speed","−20 maximum Flame\nFlame Burst costs 6 instead of 10","−30 maximum Flame\nEvery dash creates an explosion"};
+        string[] desc={"−15 maximum Flame\n+25% attack speed","−20 maximum Flame\n+25% move speed below 15 Flame","−30 maximum Flame\nEvery dash creates an explosion"};
         int[] cost={15,20,30};
         for(int i=0;i<3;i++)
         {

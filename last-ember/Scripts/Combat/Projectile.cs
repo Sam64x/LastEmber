@@ -14,7 +14,7 @@ public partial class Projectile : Node2D
         if (!Run.Playing) return;
         var previous = Position;
         Position += Velocity * (float)delta; _life -= (float)delta;
-        if (_life <= 0 || !Run.Room.HasLineOfSight(previous, Position) || !Room.Interior.HasPoint(Position)) { QueueFree(); return; }
+        if (_life <= 0 || !Run.Room.HasLineOfSight(previous, Position) || !Run.Room.Bounds.HasPoint(Position)) { QueueFree(); return; }
         if (Geometry2D.GetClosestPointToSegment(Run.Player.Position, previous, Position).DistanceTo(Run.Player.Position) < 21)
         { Run.Player.TakeDamage(new DamageInfo(Damage, previous, 80)); QueueFree(); }
         QueueRedraw();

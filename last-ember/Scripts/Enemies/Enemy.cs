@@ -2,7 +2,7 @@ using Godot;
 
 namespace LastEmber;
 
-public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss }
+public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss, Stalker }
 
 public partial class Enemy : CharacterBody2D, IDamageable
 {
@@ -25,6 +25,8 @@ public partial class Enemy : CharacterBody2D, IDamageable
     private Vector2 _waypoint;
     private float _stepClock;
     private Line2D? _tether;
+    private bool _heardReveal;
+    private float _stalkTime;
     public bool FrozenForTest { get; set; }
     public bool WindingUp => Telegraph > 0;
 
@@ -33,6 +35,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
         CollisionLayer = 4; CollisionMask = 1;
         if (Kind == EnemyKind.Moth) { MaxHealth = 25; BodyRadius = 14; }
         if (Kind == EnemyKind.Shade) MaxHealth = 60;
+        if (Kind == EnemyKind.Stalker) { MaxHealth = 45; ContactDamage = 10; }
         if (Kind == EnemyKind.Watcher) MaxHealth = 45;
         if (Kind == EnemyKind.Leech) MaxHealth = 35;
         if (Kind == EnemyKind.Torchbearer) { MaxHealth = 340; BodyRadius = 32; ContactDamage = 15; }
@@ -50,6 +53,13 @@ public partial class Enemy : CharacterBody2D, IDamageable
             AddChild(_tether);
         }
         ZIndex = 7;
+        _stepClock = Mathf.PosMod(Position.X * .017f + Position.Y * .013f, 1.6f);
+    }
+    public void HearReveal()
+    {
+        if(Kind != EnemyKind.Moth || Dead) return;
+        _heardReveal=true; Active=true;
+        Run.Audio.PlayAt("moth",Position,.8f);
     }
     public override void _PhysicsProcess(double delta)
     {
@@ -67,16 +77,19 @@ public partial class Enemy : CharacterBody2D, IDamageable
         var offset = player.Position - Position;
         float distance = offset.Length();
         bool lit = Run.IsLit(Position);
-        if (Kind == EnemyKind.Moth || Kind == EnemyKind.Watcher)
+        if (Kind == EnemyKind.Moth) Active = _heardReveal || lit;
+        else if (Kind == EnemyKind.Watcher)
         {
-            if (lit || distance < 105) Active = true;
+            if(lit && !Active) { Active=true; Cooldown=0; }
+            if(!lit && Telegraph<=0) Active=false;
         }
         else Active = true;
         SpeedNow = Kind switch
         {
             EnemyKind.Moth => 180,
-            EnemyKind.Shade => lit ? 72 : player.Flame.Ratio < .3f ? 185 : 105,
-            EnemyKind.Watcher => 88,
+            EnemyKind.Shade => 120 * (lit ? .6f : 1.4f),
+            EnemyKind.Stalker => 145,
+            EnemyKind.Watcher => 0,
             EnemyKind.Leech => 135,
             EnemyKind.Torchbearer => 72,
             _ => 112
@@ -84,14 +97,14 @@ public partial class Enemy : CharacterBody2D, IDamageable
         Vector2 direction = Active ? offset.Normalized() : Vector2.Zero;
         if (Kind == EnemyKind.Watcher && Active)
         {
-            direction *= distance < 255 ? -1 : distance < 360 ? 0 : 1;
+            direction = Vector2.Zero;
             if (Telegraph > 0)
             {
                 Telegraph -= dt; direction = Vector2.Zero;
-                if (Telegraph <= 0) { Run.Shoot(Position, Target, 260, 10); Cooldown = 2.1f; }
+                if (Telegraph <= 0) { Run.Shoot(Position, Target, 300, 10); Run.Audio.PlayAt("watcher_shot",Position,.9f); Cooldown = 2.1f; }
             }
             else if (Cooldown <= 0 && Run.Room.HasLineOfSight(Position, player.Position))
-            { Target = player.Position; Telegraph = .65f; Run.Audio.Play("warning"); }
+            { Target = player.Position; Telegraph = 1f; Run.Audio.PlayAt("warning",Position,1); }
         }
         else if (Kind == EnemyKind.Leech)
         {
@@ -117,12 +130,25 @@ public partial class Enemy : CharacterBody2D, IDamageable
                 if (Telegraph <= 0)
                 {
                     float reach = Kind == EnemyKind.Torchbearer ? 112 : 65;
-                    if (distance < reach && Run.Room.HasLineOfSight(Position, player.Position)) player.TakeDamage(new DamageInfo(ContactDamage, Position));
+                    float damage=ContactDamage*(Kind==EnemyKind.Shade&&lit?.8f:1);
+                    if (distance < reach && Run.Room.HasLineOfSight(Position, player.Position)) player.TakeDamage(new DamageInfo(damage, Position));
                     if (Kind == EnemyKind.Torchbearer) Run.Fx.Ring(Position, reach, new Color(1, .48f, .1f));
-                    Cooldown = Kind == EnemyKind.Shade && player.Flame.Ratio < .3f ? .65f : 1.2f;
+                    Cooldown = 1.2f;
                 }
             }
             else if (distance < BodyRadius + 48 && Cooldown <= 0) { Telegraph = Kind == EnemyKind.Torchbearer ? .65f : .4f; }
+        }
+        if(Kind==EnemyKind.Stalker && Telegraph<=0)
+        {
+            _stalkTime+=dt;
+            float edge=player.Light.Radius+42;
+            // The pulse exposes it in place; it follows the ordinary Flame boundary.
+            float radial=distance>edge+22?1:distance<edge-18?-1:0;
+            bool exposedByPulse=player.Revealing&&player.RevealLight.Contains(Position);
+            bool lunge=player.Flame.Current<=20&&!exposedByPulse&&Mathf.PosMod(_stalkTime,6)>4.8f;
+            direction=lunge?offset.Normalized():offset.Normalized()*radial+offset.Normalized().Orthogonal()*.32f;
+            if(lit&&!exposedByPulse&&!lunge)direction=-offset.Normalized();
+            direction=direction.LimitLength();
         }
         if (direction != Vector2.Zero)
         {
@@ -144,16 +170,17 @@ public partial class Enemy : CharacterBody2D, IDamageable
             float d2 = away.LengthSquared(), minimum = BodyRadius + other.BodyRadius + 6;
             if (d2 > .01f && d2 < minimum * minimum) separation += away.Normalized() * 55;
         }
-        Velocity = direction * SpeedNow + Knockback + separation;
+        Velocity = Kind==EnemyKind.Watcher?Vector2.Zero:direction * SpeedNow + Knockback + separation;
         Knockback = Knockback.MoveToward(Vector2.Zero, dt * 700);
         MoveAndSlide();
         _stepClock-=dt;
         if(Velocity.LengthSquared()>900&&_stepClock<=0)
         {
-            _stepClock=Kind==EnemyKind.Moth?1.8f:Kind==EnemyKind.Torchbearer?.85f:.7f;
-            Run.Audio.PlayAt(Kind==EnemyKind.Moth?"moth":Kind==EnemyKind.Torchbearer?"heavy_step":"step",Position,Kind==EnemyKind.Torchbearer?.9f:.35f);
+            _stepClock=Kind==EnemyKind.Stalker?1.35f:Kind==EnemyKind.Moth?1.8f:Kind==EnemyKind.Torchbearer?.85f:.7f;
+            Run.Audio.PlayAt(Kind==EnemyKind.Stalker?"stalker_step":Kind==EnemyKind.Moth?"moth":Kind==EnemyKind.Torchbearer?"heavy_step":"step",Position,Kind==EnemyKind.Stalker?.95f:Kind==EnemyKind.Torchbearer?.9f:.5f);
         }
-        Position = new Vector2(Mathf.Clamp(Position.X, 120, 1800), Mathf.Clamp(Position.Y, 184, 926));
+        var bounds=Run.Room.Bounds.Grow(-BodyRadius);
+        Position = new Vector2(Mathf.Clamp(Position.X,bounds.Position.X,bounds.End.X), Mathf.Clamp(Position.Y,bounds.Position.Y,bounds.End.Y));
     }
     public void BreakTether()
     {
@@ -185,6 +212,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
         {
             EnemyKind.Moth => new Color(.72f, .69f, .68f),
             EnemyKind.Shade => new Color(.43f, .36f, .61f),
+            EnemyKind.Stalker => new Color(.32f,.39f,.42f),
             EnemyKind.Watcher => new Color(.70f, .34f, .35f),
             EnemyKind.Leech => new Color(.57f, .25f, .37f),
             EnemyKind.Torchbearer => new Color(.71f, .40f, .17f),

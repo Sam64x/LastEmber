@@ -140,7 +140,8 @@ public partial class RunManager : Node
         if(StageIndex==0) { _stageResolved=true;_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Hud.Toast("WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE"); }
         else if(StageIndex==1)Hud.Toast("Q • LIGHT SLOWS THE SHADES • COSTS 5 FLAME");
         else if(StageIndex==3)Hud.Toast("LISTEN • SOME CREATURES ANSWER THE LIGHT");
-        Hud.Toast(Dungeon.Definition.DisplayName+" • "+Dungeon.Definition.Lesson);
+        if(CurrentStage is StageKind.Combat or StageKind.Elite)
+            Hud.Toast(Dungeon.Definition.DisplayName+" • "+Dungeon.Definition.Lesson);
     }
     public Enemy Spawn(EnemyKind kind,Vector2 position)
     {

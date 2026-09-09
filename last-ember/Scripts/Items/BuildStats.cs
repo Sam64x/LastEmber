@@ -9,7 +9,8 @@ public sealed class BuildStats
     private readonly Dictionary<ArtifactEffect, float> _effects = new();
     public float AttackSpeed { get; private set; } = 1;
     public float BurstCost { get; private set; } = 10;
-    public bool DashExplosion { get; private set; }
+    public bool DashExplosion => DashExplosionDamage > 0;
+    public float DashExplosionDamage { get; private set; }
     public bool AltarUsed { get; private set; }
     public float Get(ArtifactEffect effect) => _effects.GetValueOrDefault(effect);
     public bool Has(ArtifactEffect effect) => _effects.ContainsKey(effect);
@@ -30,11 +31,11 @@ public sealed class BuildStats
     }
     public bool Sacrifice(int option, FlamePool flame)
     {
-        if (AltarUsed || option < 0 || option > 2) return false;
+        if (option < 0 || option > 2) return false;
         if (!flame.ChangeMaximum(-new[] { 15, 20, 30 }[option])) return false;
         if (option == 0) AttackSpeed *= 1.25f;
         if (option == 1) _effects[ArtifactEffect.LowSpeed] = Get(ArtifactEffect.LowSpeed) + .25f;
-        if (option == 2) DashExplosion = true;
+        if (option == 2) DashExplosionDamage += 26;
         AltarUsed = true;
         return true;
     }

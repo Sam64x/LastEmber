@@ -45,7 +45,7 @@ public partial class Room : Node2D
         AddWall(R(Bounds.Position.X-26,Bounds.End.Y,Bounds.Size.X+52,26));
         AddWall(R(Bounds.Position.X-26,Bounds.Position.Y,26,Bounds.Size.Y));
         AddWall(R(Bounds.End.X,Bounds.Position.Y,26,Bounds.Size.Y));
-        if (LayoutGeometry && !BossArena && Run.StageIndex>0) foreach (var rect in LayoutObstacles(Layout))
+        if (LayoutGeometry && !BossArena && Run.StageIndex>0 && Run.CurrentStage is not (StageKind.Altar or StageKind.Reward)) foreach (var rect in LayoutObstacles(Layout))
         { var compact=new Rect2(MapPoint(rect.Position),rect.Size*Bounds.Size/Interior.Size);Obstacles.Add(compact);AddWall(compact); }
         AddChild(new WallMemory {Room=this,ZIndex=1});
         if(!BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat && Run.Dungeon.Definition.AshTraps)

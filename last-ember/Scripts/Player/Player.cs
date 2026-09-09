@@ -123,7 +123,7 @@ public partial class Player : CharacterBody2D, IDamageable
         DashCooldown = 1; _dashTime = DashDuration; _invulnerable = .2f;
         _dashDirection = direction.LengthSquared() > .01f ? direction.Normalized() : Aim;
         Run.BreakTethers();
-        if (Build.DashExplosion) Run.Explode(Position, 115, 26, false);
+        if (Build.DashExplosion) Run.Explode(Position, 115, Build.DashExplosionDamage, false);
         Run.Audio.Play("dash");
         return true;
     }

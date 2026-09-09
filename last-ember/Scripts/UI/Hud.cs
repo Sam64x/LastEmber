@@ -112,9 +112,9 @@ public partial class Hud : CanvasLayer
         var root=Overlay();
         Text(root,"ALTAR OF SACRIFICE",new Rect2(235,170,1450,42),21,Amber);
         Text(root,"Power has a price.",new Rect2(228,229,1460,86),62,Cream);
-        Text(root,"Give up maximum Flame for the rest of this run. Choose once, or walk away.",new Rect2(235,326,1480,52),25,Muted);
+        Text(root,"One sacrifice per altar. Bonuses and maximum Flame costs stack for this run.",new Rect2(235,326,1480,52),25,Muted);
         string[] names={"QUICKENED ASH","HOLLOW CORE","RUPTURE"};
-        string[] desc={"−15 maximum Flame\n+25% attack speed","−20 maximum Flame\n+25% move speed below 15 Flame","−30 maximum Flame\nEvery dash creates an explosion"};
+        string[] desc={"−15 maximum Flame\n+25% attack speed","−20 maximum Flame\n+25% move speed below 15 Flame","−30 maximum Flame\n+26 dash explosion damage"};
         int[] cost={15,20,30};
         for(int i=0;i<3;i++)
         {

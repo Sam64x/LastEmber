@@ -80,6 +80,35 @@ public partial class AttunementTests : Node
             Run.SwitchDungeon(0);p.Flame.Heal(100);p.Flame.Damage(90);
             Check(p.TryDungeonAbility()&&p.Flame.Current==5&&!p.BluePulseActive,"paid cast snapshots mode before threshold crossing");
             await Frames(220);p.Flame.Damage(100);Check(!p.TryDungeonAbility(),"dead player cannot activate Q");
+            Run.StartRun(42);p=Run.Player;
+            for(int biome=0;biome<3;biome++)
+            {
+                if(biome>0)Run.SwitchDungeon(biome);
+                while(Run.StageIndex<2){Run.Room.Cleared=true;Run.AdvanceStage();}
+                await Frames(3);
+                Check(GetTree().GetNodesInGroup("dungeon_reactive").Count==0,$"reward room has no combat props: {biome}");
+                p.Position=Run.Room.ShrinePosition;
+                Run._UnhandledInput(new InputEventAction {Action="interact",Pressed=true});
+                Check(Run.State==RunState.Reward,$"E opens shrine: {biome}");
+                Check(Run.ChooseRestore()&&Run.Playing,$"shrine restores and unpauses: {biome}");
+                while(Run.StageIndex<5){Run.Room.Cleared=true;Run.AdvanceStage();}
+                await Frames(3);
+                Check(Run.Room.IsFree(Run.Room.Bounds.GetCenter())&&GetTree().GetNodesInGroup("dungeon_reactive").Count==0,$"altar approach is clear and safe: {biome}");
+                p.Position=Run.Room.Bounds.GetCenter();
+                Run._UnhandledInput(new InputEventAction {Action="interact",Pressed=true});
+                Check(Run.State==RunState.Altar&&GetTree().Paused,$"E opens altar: {biome}");
+                var choice=(Button)Run.Hud.Modal!.FindChild("Altar0",true,false);
+                Check(!choice.Disabled,$"new altar offers another sacrifice: {biome}");
+                choice.EmitSignal(BaseButton.SignalName.Pressed);
+                Check(p.Build.AltarUsed&&p.Flame.Maximum==100-15*(biome+1)&&Run.Playing&&!GetTree().Paused&&Run.Room.Cleared,"sacrifice stacks cost and opens exit");
+                Check(Mathf.IsEqualApprox(p.Build.AttackSpeed,Mathf.Pow(1.25f,biome+1)),"attack speed stacks between altars");
+                Check(!Run.ChooseAltar(0),"same altar cannot charge twice");
+                Run.OpenAltar();Check(Run.Playing,"used altar cannot reopen");
+            }
+            var stacked=new BuildStats();var pool=new FlamePool();
+            Check(stacked.Sacrifice(2,pool)&&stacked.Sacrifice(2,pool)&&stacked.DashExplosionDamage==52,"repeated Rupture increases explosion damage");
+            Check(!stacked.Sacrifice(2,pool)&&pool.Maximum==40&&stacked.DashExplosionDamage==52,"insufficient maximum Flame changes nothing");
+            Check(stacked.Sacrifice(0,pool)&&pool.Maximum==25&&!stacked.Sacrifice(0,pool),"maximum Flame floor remains 25");
             GD.Print($"ATTUNEMENT PASS: {_checks} assertions");
             Run.ShowMenu();Run.Audio.StopAll();Run.Music.StopAll();await Frames(5);GetTree().Quit(0);
         }

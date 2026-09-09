@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://Scripts/Dungeons/DungeonProp.cs" id="1"]
+[node name="FrostEnvironment" type="Node2D"]
+[node name="Door" type="Node2D" parent="."]
+position = Vector2(1490, 556)
+script = ExtResource("1")
+Kind = 0
+Size = Vector2(42, 520)
+Label = "FROZEN PASSAGE"
+[node name="Wall" type="Node2D" parent="."]
+position = Vector2(810, 556)
+script = ExtResource("1")
+Kind = 1
+Size = Vector2(45, 180)
+Label = "SAFE BARRIER"
+[node name="Treasure" type="Node2D" parent="."]
+position = Vector2(640, 390)
+script = ExtResource("1")
+Kind = 2
+Label = "FROZEN EMBERS"
+[node name="Captive" type="Node2D" parent="."]
+position = Vector2(870, 556)
+script = ExtResource("1")
+Kind = 3
+Captive = 8
+Label = "SOMETHING INSIDE"
+[node name="Slippery" type="Node2D" parent="."]
+position = Vector2(1090, 740)
+script = ExtResource("1")
+Kind = 4
+Size = Vector2(370, 90)
+Label = "SLIPPERY ICE"
+[node name="Hazard" type="Node2D" parent="."]
+position = Vector2(1140, 390)
+script = ExtResource("1")
+Kind = 7
+Label = "UNSTABLE ICE"

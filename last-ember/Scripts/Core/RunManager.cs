@@ -17,6 +17,10 @@ public partial class RunManager : Node
     public int Kills { get; private set; }
     public float RunTime { get; private set; }
     public ulong Seed { get; private set; }
+    public DungeonController Dungeon { get; private set; } = null!;
+    public List<DungeonDefinition> Dungeons { get; } = new();
+    public int DungeonIndex { get; private set; }
+    private CanvasModulate _ambient=null!;
     public Player Player { get; private set; } = null!;
     public Room Room { get; private set; } = null!;
     public Hud Hud { get; private set; } = null!;
@@ -43,6 +47,9 @@ public partial class RunManager : Node
     {
         ProcessMode = ProcessModeEnum.Always;
         SetupInput();
+        foreach(var file in ResourceLoader.ListDirectory("res://Resources/Dungeons"))
+            if(file.EndsWith(".tres"))Dungeons.Add(ResourceLoader.Load<DungeonDefinition>("res://Resources/Dungeons/"+file));
+        Dungeons.Sort((a,b)=>string.CompareOrdinal(a.ResourcePath,b.ResourcePath));
         foreach(var file in ResourceLoader.ListDirectory("res://Resources/Artifacts"))
             if(file.EndsWith(".tres")) Artifacts.Add(ResourceLoader.Load<ArtifactData>("res://Resources/Artifacts/"+file));
         Artifacts.Sort((a,b)=>string.CompareOrdinal(a.Id,b.Id));
@@ -53,6 +60,8 @@ public partial class RunManager : Node
         var args = OS.GetCmdlineUserArgs();
         TestMode = Array.Exists(args,a=>a=="--self-test");
         if (TestMode) CallDeferred(MethodName.StartTests);
+        else if (Array.Exists(args,a=>a=="--attunement-capture")) CallDeferred(MethodName.StartAttunementCapture);
+        else if (Array.Exists(args,a=>a=="--attunement-test")) CallDeferred(MethodName.StartAttunementTests);
         else if (Array.Exists(args,a=>a=="--playtest")) CallDeferred(MethodName.StartPlaytest);
         else if (Array.Exists(args,a=>a=="--music-test")) CallDeferred(MethodName.StartMusicTests);
         else if (Array.Exists(args,a=>a=="--audio-capture")) CallDeferred(MethodName.StartAudioCapture);
@@ -74,7 +83,7 @@ public partial class RunManager : Node
         {
             if(ShrineAvailable && Player.Position.DistanceTo(Room.ShrinePosition)<90) OpenRewards();
             else if(CurrentStage==StageKind.Altar && Player.Position.DistanceTo(Room.Bounds.GetCenter())<110 && !_stageResolved) OpenAltar();
-            else if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<100) AdvanceStage();
+            else if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<100 && Room.HasLineOfSight(Player.Position,Room.ExitPosition)) AdvanceStage();
         }
     }
     private void NewWorld()
@@ -83,7 +92,8 @@ public partial class RunManager : Node
         if(IsInstanceValid(_world)) { RemoveChild(_world); _world.QueueFree(); }
         Enemies.Clear();Lights.Clear();_fires.Clear();
         _world = new Node2D { ProcessMode = ProcessModeEnum.Pausable }; AddChild(_world); MoveChild(_world,0);
-        _world.AddChild(new CanvasModulate { Color=Colors.Black });
+        _ambient=new CanvasModulate {Color=Colors.Black};_world.AddChild(_ambient);
+        Dungeon=new DungeonController {Run=this};_world.AddChild(Dungeon);
         _camera = new Camera2D { Position=new Vector2(960,540),PositionSmoothingEnabled=true,PositionSmoothingSpeed=6 }; _world.AddChild(_camera);
         Fx = new Effects();_world.AddChild(Fx);
     }
@@ -96,13 +106,15 @@ public partial class RunManager : Node
         _world.AddChild(new EmberLight { Position=new Vector2(960,540),TargetRadius=650 });
         Hud.ShowMenu();
     }
-    public void StartRun(ulong? seed=null)
+    public void StartRun(ulong? seed=null,int dungeonIndex=0)
     {
         GetTree().Paused=false; State=RunState.Playing;
         Seed=seed??(ulong)DateTime.UtcNow.Ticks;_rng.Seed=Seed;
         StageIndex=0;Kills=0;RunTime=0;Offered.Clear();_shake=0;
         NewWorld();
         Player=new Player { Run=this,Position=new Vector2(260,556),Automated=TestMode };_world.AddChild(Player);Lights.Add(Player.Light);
+        DungeonIndex=Math.Clamp(dungeonIndex,0,Dungeons.Count-1);
+        Dungeon.Enter(Dungeons[DungeonIndex]);_ambient.Color=Dungeon.Definition.Ambient;
         Music.ResetForRun();
         LoadStage(); Hud.ShowHud();
     }
@@ -112,9 +124,11 @@ public partial class RunManager : Node
         if(IsInstanceValid(_transient) && _transient.GetParent()==_world) { _world.RemoveChild(_transient);_transient.QueueFree(); }
         Enemies.Clear();Player.ResetForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
         _transient=new Node2D();_world.AddChild(_transient);
-        Room=ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn").Instantiate<Room>();
+        var rooms=Dungeon.Definition.Rooms;
+        Room=(rooms.Count>0?rooms[StageIndex%rooms.Count]:ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn")).Instantiate<Room>();
         Room.Run=this;Room.Layout=StageIndex<=3?StageIndex%8:_rng.RandiRange(0,7);Room.BossArena=CurrentStage==StageKind.Boss;
         _world.AddChild(Room);_world.MoveChild(Room,1);
+        Dungeon.Populate(Room);
         Player.Position=Room.EntrancePosition;Player.Velocity=Vector2.Zero;
         _stageResolved=false;_roomRewardTaken=false;_clearDelay=1;_waveDelay=2;
         _wavesRemaining=CurrentStage==StageKind.Combat&&StageIndex>=3?1:0;
@@ -126,11 +140,14 @@ public partial class RunManager : Node
         if(StageIndex==0) { _stageResolved=true;_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Hud.Toast("WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE"); }
         else if(StageIndex==1)Hud.Toast("Q • LIGHT SLOWS THE SHADES • COSTS 5 FLAME");
         else if(StageIndex==3)Hud.Toast("LISTEN • SOME CREATURES ANSWER THE LIGHT");
+        Hud.Toast(Dungeon.Definition.DisplayName+" • "+Dungeon.Definition.Lesson);
     }
     public Enemy Spawn(EnemyKind kind,Vector2 position)
     {
-        Enemy enemy=kind==EnemyKind.Boss?new Extinguisher():new Enemy {Kind=kind};
+        Enemy enemy=kind==EnemyKind.Boss?(Dungeon.Definition.Boss?.Instantiate<Enemy>() ?? new Extinguisher()):new Enemy {Kind=kind};
+
         enemy.Run=this;enemy.Position=position;Enemies.Add(enemy);_transient.AddChild(enemy);
+        enemy.ContactDamage*=Mathf.Max(0,Dungeon.Definition.EnemyDamageMultiplier);
         Fx.Ring(position,45,new Color(.75f,.3f,.2f));
         return enemy;
     }
@@ -142,8 +159,8 @@ public partial class RunManager : Node
             for(int attempt=0;attempt<100;attempt++)
             { position=new Vector2(_rng.RandfRange(Room.Bounds.Position.X+65,Room.Bounds.End.X-65),_rng.RandfRange(Room.Bounds.Position.Y+65,Room.Bounds.End.Y-65)); if(Room.IsFree(position)&&position.DistanceTo(Player.Position)>320) break; }
             if(!Room.IsFree(position)||position.DistanceTo(Player.Position)<220) continue;
-            EnemyKind[] types=StageIndex==1?new[]{EnemyKind.Shade}:StageIndex==3?new[]{EnemyKind.Moth,EnemyKind.Watcher,EnemyKind.Shade}:new[]{EnemyKind.Shade,EnemyKind.Moth,EnemyKind.Watcher,EnemyKind.Stalker};
-            Spawn(types[i%types.Length],position);
+            var types=Dungeon.Definition.Enemies;
+            Spawn(types.Count>0?types[i%types.Count]:EnemyKind.Shade,position);
         }
     }
     public override void _Process(double delta)
@@ -192,8 +209,8 @@ public partial class RunManager : Node
     }
     public void BreakTethers() {foreach(var enemy in Enemies)enemy.BreakTether();}
     public void AddFire(Vector2 position) { if(_fires.Count<60)_fires.Add(new FirePatch {Position=position}); }
-    public void Shoot(Vector2 origin,Vector2 target,float speed,float damage)
-        =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage});
+    public void Shoot(Vector2 origin,Vector2 target,float speed,float damage,bool fire=false)
+        =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage,Fire=fire});
     public void Explode(Vector2 origin,float radius,float damage,bool burn)
     {
         Fx.Ring(origin,radius,FlamePalette.Fire(Player.Flame.LastEmber));Fx.Sparks(origin,FlamePalette.Fire(Player.Flame.LastEmber),24);
@@ -211,7 +228,11 @@ public partial class RunManager : Node
         }
         Fx.Sparks(enemy.Position,FlamePalette.Fire(Player.Flame.LastEmber),20);
         if(burning&&Player.Build.Has(ArtifactEffect.BurnExplosion))Explode(enemy.Position,95,18,false);
-        if(enemy.Kind==EnemyKind.Boss)EndRun(true);
+        if(enemy.Kind==EnemyKind.Boss)
+        {
+            if(DungeonIndex+1<Dungeons.Count)CallDeferred(MethodName.NextDungeon);
+            else EndRun(true);
+        }
     }
     public void Shake(float amount)=>_shake=Mathf.Max(_shake,amount);
     public void HitStop(float seconds)
@@ -283,6 +304,15 @@ public partial class RunManager : Node
         if(State is RunState.GameOver or RunState.Victory or RunState.Menu)return;
         State=victory?RunState.Victory:RunState.GameOver;GetTree().Paused=true;Hud.ShowEnd(victory);
     }
+    public void SwitchDungeon(int index)
+    {
+        if(!Playing || index<0 || index>=Dungeons.Count)return;
+        Player.ResetForRoom();DungeonIndex=index;Dungeon.Enter(Dungeons[index]);_ambient.Color=Dungeon.Definition.Ambient;
+        StageIndex=0;LoadStage();
+    }
+    private void NextDungeon()=>SwitchDungeon(DungeonIndex+1);
+    private void StartAttunementCapture()=>AddChild(new AttunementCapture {Run=this});
+    private void StartAttunementTests(){TestMode=true;AddChild(new AttunementTests {Run=this});}
     private void StartTests() {AddChild(new SmokeTests { Run=this });}
     private void StartCapture() {AddChild(new CaptureScenes { Run=this });}
     private void StartPlaytest() {AddChild(new BotPlaytest { Run=this });}

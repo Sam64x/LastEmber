@@ -7,6 +7,7 @@ public partial class Room : Node2D
 {
     public static readonly Rect2 Interior = new(96, 160, 1728, 792);
     public RunManager Run { get; set; } = null!;
+    [Export] public bool LayoutGeometry { get; set; } = true;
     public int Layout { get; set; }
     public bool BossArena { get; set; }
     public bool Cleared { get; set; }
@@ -44,10 +45,10 @@ public partial class Room : Node2D
         AddWall(R(Bounds.Position.X-26,Bounds.End.Y,Bounds.Size.X+52,26));
         AddWall(R(Bounds.Position.X-26,Bounds.Position.Y,26,Bounds.Size.Y));
         AddWall(R(Bounds.End.X,Bounds.Position.Y,26,Bounds.Size.Y));
-        if (!BossArena && Run.StageIndex>0) foreach (var rect in LayoutObstacles(Layout))
+        if (LayoutGeometry && !BossArena && Run.StageIndex>0) foreach (var rect in LayoutObstacles(Layout))
         { var compact=new Rect2(MapPoint(rect.Position),rect.Size*Bounds.Size/Interior.Size);Obstacles.Add(compact);AddWall(compact); }
         AddChild(new WallMemory {Room=this,ZIndex=1});
-        if(!BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat)
+        if(!BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat && Run.Dungeon.Definition.AshTraps)
         {
             foreach(var point in new[]{MapPoint(new Vector2(780,330)),MapPoint(new Vector2(1160,780))})
                 if(IsFree(point,35))AddChild(new AshTrap {Run=Run,Position=point,ZIndex=12});
@@ -67,6 +68,12 @@ public partial class Room : Node2D
                 AddChild(light); Torches.Add(light); Run.Lights.Add(light);
             }
         }
+    }
+    public void RefreshNavigation()
+    {
+        for(int y=0;y<16;y++)for(int x=0;x<36;x++)
+            _navigation.SetPointSolid(new Vector2I(x,y),!IsFree(new Vector2(120+x*48,184+y*48),36));
+        QueueRedraw();
     }
     private void AddWall(Rect2 rect)
     {

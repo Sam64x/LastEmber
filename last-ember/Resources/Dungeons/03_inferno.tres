@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=7 format=3]
+[ext_resource type="Script" path="res://Scripts/Dungeons/DungeonDefinition.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Dungeons/BackdraftDefinition.cs" id="2"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeons/elemental_room.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeons/inferno_environment.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeons/inferno_boss.tscn" id="5"]
+[sub_resource type="Resource" id="Ability"]
+script = ExtResource("2")
+DisplayName = "Backdraft"
+BlueName = "Cold Flame"
+Radius = 310.0
+BlueRadiusScale = 0.5
+Duration = 1.3
+BlueDuration = 1.0
+Sound = "backdraft_in"
+BlueSound = "cold_flame"
+Tint = Color(1, 0.68, 0.45, 1)
+[resource]
+script = ExtResource("1")
+DungeonType = 2
+DisplayName = "inferno"
+Lesson = "Q absorbs fire, then blasts. Cross before the fire returns."
+Ability = SubResource("Ability")
+Ambient = Color(0.48, 0.22, 0.12, 1)
+FloorTint = Color(1, 0.68, 0.45, 1)
+Enemies = Array[int]([9, 9, 5])
+Rooms = Array[PackedScene]([ExtResource("3")])
+Environment = ExtResource("4")
+Boss = ExtResource("5")
+BossName = "The Cinder Heart"
+
+AshTraps = false

@@ -28,7 +28,7 @@ public partial class Hud : CanvasLayer
         _dashBar=Bar(_hud,new Rect2(1150,78,182,5),new Color(.72f,.71f,.77f));
         _reveal=Text(_hud,"",new Rect2(1450,33,410,64),20,Cream);
         _relics=Text(_hud,"",new Rect2(62,995,1260,80),17,Muted,true);
-        Text(_hud,"WASD  MOVE     LMB  STRIKE     SPACE  DASH\nQ  REVEAL     E  USE     ESC  PAUSE",new Rect2(1390,1004,490,56),17,Muted);
+        Text(_hud,"WASD  MOVE     LMB  STRIKE     SPACE  DASH\nQ  ATTUNEMENT     E  USE     ESC  PAUSE",new Rect2(1390,1004,490,56),17,Muted);
         _toast=Text(_hud,"",new Rect2(350,150,1220,52),27,Cream);_toast.HorizontalAlignment=HorizontalAlignment.Center;
         _bossName=Text(_hud,"",new Rect2(620,861,680,40),24,Cream);_bossName.HorizontalAlignment=HorizontalAlignment.Center;
         _bossBar=Bar(_hud,new Rect2(620,908,680,9),new Color(.82f,.25f,.18f));
@@ -46,13 +46,13 @@ public partial class Hud : CanvasLayer
         _room.Text=$"{Run.StageIndex+1:00} / 10   ·   {Run.CurrentStage.ToString().ToUpperInvariant()}\n{Run.Kills} FALLEN     {TimeText(Run.RunTime)}";
         _dash.Text=player.DashCooldown<=0?"SPACE   DASH READY":$"SPACE   {player.DashCooldown:0.0}s";
         _dashBar.Value=(1-player.DashCooldown)*100;
-        _reveal.Text=(blue?"Q   BLUE PULSE • FREE":$"Q   REVEAL  −{player.RevealCost:0}")+"\n"+(player.RevealCooldown<=0?(blue?"+40% DAMAGE • STAY ALIVE":"LIGHT THE DARK"):$"RECHARGING  {player.RevealCooldown:0.0}s");
+        _reveal.Text=$"Q   {player.AbilityName.ToUpperInvariant()}  "+(blue?"FREE":$"-{player.RevealCost:0}")+"\n"+(player.RevealCooldown<=0?Run.Dungeon.Definition.DisplayName:$"RECHARGING {player.RevealCooldown:0.0}s");
         _reveal.Modulate=blue?new Color(.35f,.8f,1):Colors.White;
         string relics="";foreach(var artifact in player.Build.Artifacts)relics+=(relics.Length>0?"  /  ":"")+artifact.DisplayName;
         _relics.Text=$"RELICS  {player.Build.Artifacts.Count:00}"+(player.Build.AltarUsed?"    •    SACRIFICE BOUND":"")+"\n"+(relics.Length==0?"Carry a little light into the dark.":relics);
-        Extinguisher? boss=null;foreach(var enemy in Run.Enemies)if(enemy is Extinguisher found)boss=found;
+        Enemy? boss=null;foreach(var enemy in Run.Enemies)if(enemy.Kind==EnemyKind.Boss)boss=enemy;
         _bossBar.Visible=boss!=null;_bossName.Visible=boss!=null;
-        if(boss!=null){_bossBar.Value=boss.Health/boss.MaxHealth*100;_bossName.Text=$"THE EXTINGUISHER    /    PHASE {boss.Phase}";}
+        if(boss!=null){_bossBar.Value=boss.Health/boss.MaxHealth*100;_bossName.Text=Run.Dungeon.Definition.BossName.ToUpperInvariant();}
         if(Run.Playing){_toastTime-=(float)delta;_toast.Visible=_toastTime>0;}
         bool nearShrine=Run.ShrineAvailable&&player.Position.DistanceTo(Run.Room.ShrinePosition)<90;
         bool nearAltar=Run.CurrentStage==StageKind.Altar&&player.Position.DistanceTo(Run.Room.Bounds.GetCenter())<110;
@@ -83,7 +83,9 @@ public partial class Hud : CanvasLayer
         Button(root,"START RUN     →",new Rect2(145,795,425,80),()=>Run.StartRun(),true,"StartRun");
         Button(root,"QUIT",new Rect2(590,795,190,80),()=>GetTree().Quit(),false,"Quit");
         Button(root,"AUDIO",new Rect2(805,795,220,80),ShowAudio,false,"AudioSettings");
-        Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  REVEAL    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
+        Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  ATTUNEMENT    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
+        for(int i=0;i<Run.Dungeons.Count;i++)
+        {int selected=i;Button(root,Run.Dungeons[i].DisplayName.ToUpperInvariant(),new Rect2(1100,680+i*75,380,65),()=>Run.StartRun(dungeonIndex:selected),false,"Dungeon"+i);}
         Text(root,"01   /   THE FALLEN CITY",new Rect2(1370,976,420,38),18,Muted);
     }
     public void ShowRewards()

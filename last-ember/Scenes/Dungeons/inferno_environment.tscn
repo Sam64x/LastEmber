@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://Scripts/Dungeons/DungeonProp.cs" id="1"]
+[node name="InfernoEnvironment" type="Node2D"]
+[node name="Corridor" type="Node2D" parent="."]
+position = Vector2(760, 556)
+script = ExtResource("1")
+Kind = 6
+Size = Vector2(120, 520)
+Label = "Q - CROSS WHILE COLD"
+[node name="Trap" type="Node2D" parent="."]
+position = Vector2(1080, 556)
+script = ExtResource("1")
+Kind = 5
+Size = Vector2(100, 100)
+Label = "FIRE VOLLEY"
+[node name="ExitFire" type="Node2D" parent="."]
+position = Vector2(1440, 556)
+script = ExtResource("1")
+Kind = 6
+Size = Vector2(90, 220)
+Label = "TEMPORARY SAFE WINDOW"

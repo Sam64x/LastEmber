@@ -53,6 +53,12 @@ public partial class GameAudio : Node
         _sounds["ember_return"]=Texture(.5f,160,680,.3f,202);
         _sounds["blue_pulse"]=Texture(.4f,760,220,.65f,203);
         _sounds["blue_crackle"]=StrikeLayer(3,.48f,204);
+        _sounds["thermal"]=Texture(.7f,90,600,.8f,301);
+        _sounds["ice_crack"]=StrikeLayer(3,.6f,302);
+        _sounds["blue_ice"]=Texture(.35f,1500,620,.7f,303);
+        _sounds["backdraft_in"]=Texture(.65f,80,650,.92f,304);
+        _sounds["backdraft_blast"]=Tone(95,28,.65f,.6f);
+        _sounds["cold_flame"]=Texture(.5f,1400,400,.75f,305);
         SetVolume(Volume);
     }
     public override void _Process(double delta){_time+=(float)delta;}

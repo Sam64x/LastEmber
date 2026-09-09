@@ -2,9 +2,9 @@ using Godot;
 
 namespace LastEmber;
 
-public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss, Stalker }
+public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss, Stalker, IceGuard, FireWisp }
 
-public partial class Enemy : CharacterBody2D, IDamageable
+public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
 {
     [Export] public EnemyKind Kind { get; set; }
     [Export] public float MaxHealth { get; set; } = 40;
@@ -27,11 +27,22 @@ public partial class Enemy : CharacterBody2D, IDamageable
     private Line2D? _tether;
     private bool _heardReveal;
     private float _stalkTime;
+    public bool IceArmored { get; set; }
+    public bool FireAligned { get; set; }
+    public float Weakened { get; private set; }
+    public void React(DungeonImpact impact,float seconds,Vector2 origin,bool blue)
+    {
+        if(Dead)return;
+        if(impact==DungeonImpact.Heat && IceArmored){IceArmored=false;Run.Fx.Sparks(Position,new Color(.65f,.9f,1),15);}
+        if(impact==DungeonImpact.Suction && FireAligned)Weakened=Mathf.Max(Weakened,seconds);
+        if(impact==DungeonImpact.Blast)TakeDamage(new DamageInfo(FireAligned && Weakened>0?18:10,origin,300));
+    }
     public bool FrozenForTest { get; set; }
     public bool WindingUp => Telegraph > 0;
 
     public override void _Ready()
     {
+        AddToGroup("dungeon_reactive");IceArmored|=Kind==EnemyKind.IceGuard;FireAligned|=Kind==EnemyKind.FireWisp;
         CollisionLayer = 4; CollisionMask = 1;
         if (Kind == EnemyKind.Moth) { MaxHealth = 25; BodyRadius = 14; }
         if (Kind == EnemyKind.Shade) MaxHealth = 60;
@@ -68,6 +79,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
         Clock += dt; Flash = Mathf.Max(0, Flash - dt); Cooldown -= dt; _tetherGrace -= dt;
         if (Burn.Tick(dt)) TakeDamage(new DamageInfo(5*Run.Player.Flame.LastEmberDamageMultiplier, Position, 0, IsBurnTick:true));
         if (Dead) return;
+        Weakened=Mathf.Max(0,Weakened-dt);
         if (!FrozenForTest) Behave(dt);
         QueueRedraw();
     }
@@ -94,6 +106,8 @@ public partial class Enemy : CharacterBody2D, IDamageable
             EnemyKind.Torchbearer => 72,
             _ => 112
         };
+        if(Weakened>0)SpeedNow*=.4f;
+        if(FireAligned && Cooldown<=0 && Weakened<=0){Run.Shoot(Position,player.Position,240,8,true);Cooldown=2;}
         Vector2 direction = Active ? offset.Normalized() : Vector2.Zero;
         if (Kind == EnemyKind.Watcher && Active)
         {
@@ -130,7 +144,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
                 if (Telegraph <= 0)
                 {
                     float reach = Kind == EnemyKind.Torchbearer ? 112 : 65;
-                    float damage=ContactDamage*(Kind==EnemyKind.Shade&&lit?.8f:1);
+                    float damage=ContactDamage*(Weakened>0?.4f:1)*(Kind==EnemyKind.Shade&&lit?.8f:1);
                     if (distance < reach && Run.Room.HasLineOfSight(Position, player.Position)) player.TakeDamage(new DamageInfo(damage, Position));
                     if (Kind == EnemyKind.Torchbearer) Run.Fx.Ring(Position, reach, new Color(1, .48f, .1f));
                     Cooldown = 1.2f;
@@ -191,7 +205,7 @@ public partial class Enemy : CharacterBody2D, IDamageable
     {
         if (Dead) return;
         if (hit.Burn) Burn.Apply();
-        Health = Mathf.Max(0, Health - hit.Amount);
+        Health = Mathf.Max(0, Health - hit.Amount*(IceArmored?.3f:1)*(FireAligned&&Weakened>0?1.3f:1));
         Flash = .13f; Active = true;
         Knockback = (Position - hit.Origin).Normalized() * hit.Knockback;
         Run.Fx.Sparks(Position, FlamePalette.Fire(Run.Player.Flame.LastEmber), 7);
@@ -207,6 +221,8 @@ public partial class Enemy : CharacterBody2D, IDamageable
     public override void _Draw()
     {
         float r = BodyRadius;
+        if(IceArmored)DrawArc(Vector2.Zero,r+8,0,Mathf.Tau,12,new Color(.6f,.9f,1),5);
+        if(FireAligned)DrawArc(Vector2.Zero,r+8,0,Mathf.Tau,32,Weakened>0?new Color(.6f,.9f,1):new Color(1,.3f,.05f),4);
         DrawCircle(new Vector2(0, r * .6f), r + 4, new Color(0, 0, 0, .65f));
         var color = Flash > 0 ? Colors.White : Kind switch
         {

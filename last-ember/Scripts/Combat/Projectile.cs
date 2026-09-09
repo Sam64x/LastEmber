@@ -2,16 +2,21 @@ using Godot;
 
 namespace LastEmber;
 
-public partial class Projectile : Node2D
+public partial class Projectile : Node2D, IDungeonReactive
 {
     public RunManager Run { get; set; } = null!;
     public Vector2 Velocity { get; set; }
     public float Damage { get; set; } = 10;
+    public bool Fire {get;set;}
+    public void React(DungeonImpact impact,float seconds,Vector2 origin,bool blue)
+    {
+        if(Fire && impact==DungeonImpact.Suction && !blue){Hide();QueueFree();}
+    }
     private float _life = 5;
-    public override void _Ready() { ZIndex = 12; }
+    public override void _Ready() { ZIndex = 12; AddToGroup("dungeon_reactive"); }
     public override void _PhysicsProcess(double delta)
     {
-        if (!Run.Playing) return;
+        if (!Run.Playing || IsQueuedForDeletion()) return;
         var previous = Position;
         Position += Velocity * (float)delta; _life -= (float)delta;
         if (_life <= 0 || !Run.Room.HasLineOfSight(previous, Position) || !Run.Room.Bounds.HasPoint(Position)) { QueueFree(); return; }

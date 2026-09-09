@@ -8,12 +8,14 @@ public partial class Player : CharacterBody2D, IDamageable
     [Export] public float MeleeDamage { get; set; } = 20;
     [Export] public float BurstDamage { get; set; } = 48;
     [Export] public float DashDuration { get; set; } = .18f;
-    [Export] public float RevealCost {get;set;}=5;
-    [Export] public float RevealCooldownSeconds {get;set;}=10;
-    [Export] public float RevealRadius {get;set;}=1900;
-    [Export] public float RevealExpandSeconds {get;set;}=.6f;
-    [Export] public float RevealHoldSeconds {get;set;}=.9f;
-    [Export] public float RevealFadeSeconds {get;set;}=2f;
+    public float RevealCost => Attunement?.Settings.Cost ?? 5;
+    public AbilityRuntime? Attunement { get; private set; }
+    public string AbilityName => Attunement == null ? "" : Flame.LastEmber ? Attunement.Settings.BlueName : Attunement.Settings.DisplayName;
+    public void Attune(DungeonAbility definition)
+    {
+        if(Attunement!=null){Attunement.ExitDungeon();RemoveChild(Attunement);Attunement.QueueFree();}
+        Attunement=definition.CreateRuntime();Attunement.Settings=definition;Attunement.EnterDungeon(this);AddChild(Attunement);
+    }
     public FlamePool Flame { get; } = new();
     public BuildStats Build { get; } = new();
     public EmberLight Light { get; private set; } = null!;
@@ -23,13 +25,10 @@ public partial class Player : CharacterBody2D, IDamageable
     public bool Dashing => _dashTime > 0;
     public float DashCooldown { get; private set; }
     public float BurstCooldown { get; private set; }
-    public float RevealCooldown => Flame.LastEmber?_bluePulseCooldown:_normalRevealCooldown;
-    public bool BluePulseActive {get;private set;}
-    private float _bluePulseCooldown,_normalRevealCooldown;
-    private float _pulseRadius,_pulseExpand,_pulseHold,_pulseFade,_coldClock;
-    private float _blueBlend;
-    public bool Revealing {get;private set;}
-    private float _revealTime,_revealStart;
+    public float RevealCooldown => Attunement?.Remaining ?? 0;
+    public bool BluePulseActive => Revealing && Attunement!.Blue;
+    private float _coldClock, _blueBlend;
+    public bool Revealing => Attunement is { Reveals: true, Active: true };
     public Vector2 Aim { get; set; } = Vector2.Right;
     public Vector2 TestMovement { get; set; }
     public bool Automated { get; set; }
@@ -65,11 +64,11 @@ public partial class Player : CharacterBody2D, IDamageable
         var dt = (float)delta;
         DashCooldown = Mathf.Max(0, DashCooldown - dt);
         BurstCooldown = Mathf.Max(0, BurstCooldown - dt);
-        _normalRevealCooldown=Mathf.Max(0,_normalRevealCooldown-dt);
-        _bluePulseCooldown=Mathf.Max(0,_bluePulseCooldown-dt);
+
+
         _blueBlend=Mathf.Lerp(_blueBlend,Flame.LastEmber?1:0,1-Mathf.Exp(-dt*12));
         Light.Tint=FlamePalette.Light(Flame.LastEmber);
-        RevealLight.Tint=FlamePalette.Light(Flame.LastEmber);
+
         _strikeLight.Tint=FlamePalette.Light(Flame.LastEmber);
         _strikeFx.Blue=Flame.LastEmber;
         _coldClock-=dt;
@@ -83,7 +82,7 @@ public partial class Player : CharacterBody2D, IDamageable
             var aim = GetGlobalMousePosition() - GlobalPosition;
             if (aim.LengthSquared() > 1) Aim = aim.Normalized();
             if (Input.IsActionJustPressed("dash")) TryDash(input);
-            if (Input.IsActionJustPressed("reveal")) TryReveal();
+            if (Input.IsActionJustPressed("reveal")) TryDungeonAbility();
             if(_waitForMouseRelease)_waitForMouseRelease=Input.IsActionPressed("melee");
             else
             {
@@ -102,7 +101,12 @@ public partial class Player : CharacterBody2D, IDamageable
                 if (Build.Has(ArtifactEffect.DashTrail)) Run.AddFire(Position);
             }
         }
-        else Velocity = input * MoveSpeed * Build.SpeedMultiplier(Flame) + _knockback;
+        else
+        {
+            var desired=input * MoveSpeed * Build.SpeedMultiplier(Flame);
+            Velocity=Run.Dungeon.IsSlippery(Position)?Velocity.Lerp(desired,1-Mathf.Exp(-dt*Mathf.Max(.1f,Run.Dungeon.Definition.SurfaceDrag))):desired;
+            Velocity+=_knockback;
+        }
         _knockback = _knockback.MoveToward(Vector2.Zero, dt * 750);
         MoveAndSlide();
         _stepClock-=dt;
@@ -110,7 +114,7 @@ public partial class Player : CharacterBody2D, IDamageable
         var bounds=Run.Room.Bounds.Grow(-16);
         Position = new Vector2(Mathf.Clamp(Position.X, bounds.Position.X, bounds.End.X), Mathf.Clamp(Position.Y, bounds.Position.Y, bounds.End.Y));
         Light.TargetRadius = FlameLight.Radius(Flame.Current,Build.LightMultiplier);
-        UpdateReveal(dt);
+
         QueueRedraw();
     }
     public bool TryDash(Vector2 direction)
@@ -124,52 +128,15 @@ public partial class Player : CharacterBody2D, IDamageable
         return true;
     }
     public void SuppressUiClick()=>_waitForMouseRelease=true;
-    public bool TryReveal()
-    {
-        if(Dead||!Run.Playing||RevealCooldown>0)return false;
-        if(!Flame.LastEmber&&Flame.Current-RevealCost<=FlamePool.LastEmberThreshold&&_bluePulseCooldown>0)return false;
-        if(!Flame.LastEmber&&!Flame.Spend(RevealCost))return false;
-        BluePulseActive=Flame.LastEmber;
-        if(BluePulseActive)_bluePulseCooldown=3;else _normalRevealCooldown=RevealCooldownSeconds;
-        _pulseRadius=RevealRadius*(BluePulseActive?.4f:1);
-        _pulseExpand=BluePulseActive?.18f:RevealExpandSeconds;
-        _pulseHold=BluePulseActive?.22f:RevealHoldSeconds;
-        _pulseFade=BluePulseActive?.6f:RevealFadeSeconds;
-        Revealing=true;_revealTime=0;_revealStart=Light.Radius;
-        RevealLight.ResetRadius(_revealStart);RevealLight.Energy=RevealLight.Intensity;RevealLight.Lit=true;
-        if(!Run.Lights.Contains(RevealLight))Run.Lights.Add(RevealLight);
-        foreach(var enemy in Run.Enemies) enemy.HearReveal();
-        Run.Audio.Play(BluePulseActive?"blue_pulse":"reveal");Run.Fx.Sparks(Position,FlamePalette.Fire(Flame.LastEmber),14);
-        return true;
-    }
-    private void UpdateReveal(float dt)
-    {
-        if(!Revealing)return;
-        _revealTime+=dt;
-        float fadeStart=_pulseExpand+_pulseHold;
-        if(_revealTime<_pulseExpand)
-            RevealLight.ResetRadius(Mathf.Lerp(_revealStart,_pulseRadius,Mathf.SmoothStep(0,1,_revealTime/_pulseExpand)));
-        else if(_revealTime<fadeStart)RevealLight.ResetRadius(_pulseRadius);
-        else
-        {
-            float fade=Mathf.SmoothStep(0,1,Mathf.Clamp((_revealTime-fadeStart)/_pulseFade,0,1));
-            RevealLight.ResetRadius(Mathf.Lerp(_pulseRadius,Light.TargetRadius,fade));
-            RevealLight.Energy=RevealLight.Intensity*(1-fade);
-            if(_revealTime>=fadeStart+_pulseFade)CancelReveal();
-        }
-    }
+    public bool TryDungeonAbility() => Attunement?.Activate() ?? false;
+    public bool TryReveal() => TryDungeonAbility(); // Compatibility for existing development tools.
     public void ResetForRoom()
     {
         _strikeWindup=0;_strikeLightTime=0;_strikeFx.Clear();_strikeLight.Lit=false;
         Run.Lights.Remove(_strikeLight);
         CancelReveal();
     }
-    private void CancelReveal()
-    {
-        Revealing=false;_revealTime=0;RevealLight.Lit=false;RevealLight.Energy=0;
-        BluePulseActive=false;
-        Run.Lights.Remove(RevealLight);
-    }
+    private void CancelReveal() => Attunement?.Cancel();
     private void OnLastEmberChanged(bool blue)
     {
         CancelReveal();
@@ -178,7 +145,7 @@ public partial class Player : CharacterBody2D, IDamageable
         Run.Fx.FlameTransition(Position,blue);
         Run.Audio.Play(blue?"last_ember":"ember_return");
         if(Run.Playing){Run.Shake(3);Run.HitStop(.05f);}
-        Run.Hud.Toast(blue?"LAST EMBER • ONE LAST CHANCE • Q BLUE PULSE":"FLAME RESTORED • THE LAST CHANCE IS RENEWED");
+        Run.Hud.Toast(blue?"LAST EMBER • ONE LAST CHANCE • Q DUNGEON ABILITY":"FLAME RESTORED • THE LAST CHANCE IS RENEWED");
     }
     private void OnFlameChanged()
     {
@@ -256,8 +223,6 @@ public partial class Player : CharacterBody2D, IDamageable
     }
     public override void _Draw()
     {
-        if(Revealing&&_revealTime<1.1f)
-            DrawArc(Vector2.Zero,Mathf.Max(20,RevealLight.Radius*.88f),0,Mathf.Tau,128,FlamePalette.Shift(new Color(1,.86f,.56f,.65f*(1-_revealTime/1.1f)),Flame.LastEmber),4,true);
         DrawCircle(new Vector2(0, 13), 21, new Color(0, 0, 0, .65f));
         var white = _invulnerable > .2f && ((int)(_invulnerable * 25) % 2 == 0);
         var c = white ? Colors.White : new Color(1,.56f,.19f).Lerp(new Color(.15f,.65f,1),_blueBlend);

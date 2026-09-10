@@ -14,5 +14,6 @@ public partial class ArtifactData : Resource
     [Export] public Texture2D? Icon { get; set; }
     [Export] public ArtifactEffect Effect { get; set; }
     [Export] public float Value { get; set; }
+    [Export] public string[] Tags { get; set; } = System.Array.Empty<string>();
     [Export] public bool Stackable { get; set; }
 }

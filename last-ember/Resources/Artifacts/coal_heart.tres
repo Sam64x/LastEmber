@@ -10,3 +10,4 @@ Description = "Max Flame +20. Increases capacity without restoring current Flame
 Rarity = 1
 Effect = 0
 Value = 20
+Tags = PackedStringArray("Flame")

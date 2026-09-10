@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 23
+Value = 35
+[resource]
+script = ExtResource("1")
+Id = "blazing_cadence"
+DisplayName = "Blazing Cadence"
+Description = "Combo + Burn: every fourth hit sends a wave carrying 35 Heat. Combines with Fourth Flame damage."
+Tags = PackedStringArray("Melee", "Combo", "Burn", "Heat")
+RequiredIds = PackedStringArray("combo_core", "burn_core")
+RequiredTags = PackedStringArray("Melee", "Burn", "Combo")
+Synergy = true
+Rarity = 3
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

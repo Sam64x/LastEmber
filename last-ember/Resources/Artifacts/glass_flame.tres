@@ -10,3 +10,4 @@ Description = "Max Flame −25. All direct attack damage +30%."
 Rarity = 3
 Effect = 5
 Value = 0.3
+Tags = PackedStringArray("Melee", "Crit")

@@ -49,7 +49,12 @@ public partial class Hud : CanvasLayer
         _reveal.Text=$"Q   {player.AbilityName.ToUpperInvariant()}  "+(blue?"FREE":$"-{player.RevealCost:0}")+"\n"+(player.RevealCooldown<=0?Run.Dungeon.Definition.DisplayName:$"RECHARGING {player.RevealCooldown:0.0}s");
         _reveal.Modulate=blue?new Color(.35f,.8f,1):Colors.White;
         string relics="";foreach(var artifact in player.Build.Artifacts)relics+=(relics.Length>0?"  /  ":"")+artifact.DisplayName;
+        if(relics.Length>110)relics=relics[..107]+"…";
+        string specializations="";
+        foreach(var upgrade in player.Progression.Upgrades)if(upgrade is SubCoreData)specializations+=(specializations.Length>0?" / ":"")+upgrade.DisplayName;
         _relics.Text=$"RELICS  {player.Build.Artifacts.Count:00}"+(player.Build.AltarUsed?"    •    SACRIFICE BOUND":"")+"\n"+(relics.Length==0?"Carry a little light into the dark.":relics);
+        if(player.Melee.HasCore)_relics.Text+=$"\nMELEE {player.Melee.LastStep}/3  •  STREAK {player.Melee.HitStreak}  •  {specializations}  •  {player.Progression.Upgrades.Count} UPGRADES"+(player.Melee.Charging?$"  •  CHARGE {player.Melee.ChargeRatio:P0}":"");
+        if(Run.DevEnabled)_relics.Text+="   •   DEV MODE: F1";
         Enemy? boss=null;foreach(var enemy in Run.Enemies)if(enemy.Kind==EnemyKind.Boss)boss=enemy;
         _bossBar.Visible=boss!=null;_bossName.Visible=boss!=null;
         if(boss!=null){_bossBar.Value=boss.Health/boss.MaxHealth*100;_bossName.Text=Run.Dungeon.Definition.BossName.ToUpperInvariant();}
@@ -86,6 +91,7 @@ public partial class Hud : CanvasLayer
         Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  ATTUNEMENT    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
         for(int i=0;i<Run.Dungeons.Count;i++)
         {int selected=i;Button(root,Run.Dungeons[i].DisplayName.ToUpperInvariant(),new Rect2(1100,680+i*75,380,65),()=>Run.StartRun(dungeonIndex:selected),false,"Dungeon"+i);}
+        AddDevToggle(root,new Vector2(145,891));
         Text(root,"01   /   THE FALLEN CITY",new Rect2(1370,976,420,38),18,Muted);
     }
     public void ShowRewards()
@@ -93,17 +99,18 @@ public partial class Hud : CanvasLayer
         var root=Overlay();
         Text(root,$"EMBER SHRINE    •    {Run.Player.Flame.Current:0} / {Run.Player.Flame.Maximum:0} FLAME",new Rect2(235,170,1450,42),21,Amber);
         Text(root,"Warmth or strength?",new Rect2(228,229,1460,86),62,Cream);
-        Text(root,"Restore 20 Flame OR bind one artifact. You can choose only once.",new Rect2(235,326,1400,52),25,Muted);
+        Text(root,"Restore 20 Flame OR choose one Core, SubCore, talent or artifact.",new Rect2(235,326,1400,52),25,Muted);
         for(int i=0;i<Run.Offered.Count;i++)
         {
             int selected=i;var item=Run.Offered[i];float x=235+i*490;
             Panel(root,new Rect2(x,425,460,409),new Color(.067f,.063f,.068f));
             Panel(root,new Rect2(x,425,460,3),item.Rarity>=3?new Color(.78f,.46f,.71f):Amber);
-            root.AddChild(new RelicGlyph {Position=new Vector2(x+52,478),Effect=item.Effect});
-            Text(root,item.Rarity>=3?"RARE RELIC":"EMBER RELIC",new Rect2(x+100,462,320,36),17,Muted);
-            Text(root,item.DisplayName,new Rect2(x+28,538,400,58),31,Cream);
-            Text(root,item.Description,new Rect2(x+28,611,400,109),23,Muted,true);
-            Button(root,"BIND RELIC   +",new Rect2(x+28,747,404,60),()=>Run.ChooseReward(selected),true,$"Reward{selected}");
+            if(item.Artifact!=null)root.AddChild(new RelicGlyph {Position=new Vector2(x+52,478),Effect=item.Artifact.Effect});
+            else Text(root,"✦",new Rect2(x+28,452,70,60),42,Amber);
+            Text(root,item.Category,new Rect2(x+100,462,320,36),17,Muted);
+            Text(root,item.DisplayName,new Rect2(x+28,532,400,64),28,Cream,true);
+            Text(root,item.Description,new Rect2(x+28,605,400,130),20,Muted,true);
+            Button(root,"CHOOSE   +",new Rect2(x+28,747,404,60),()=>Run.ChooseReward(selected),true,$"Reward{selected}");
         }
         Button(root,"RESTORE  +20 FLAME  •  FORGO ARTIFACT",new Rect2(545,878,830,70),()=>Run.ChooseRestore(),false,"RestoreFlame");
     }
@@ -131,6 +138,8 @@ public partial class Hud : CanvasLayer
     public void ShowPause()
     {
         var root=Overlay();
+        AddDevToggle(root,new Vector2(70,290));
+        Button(root,"DEV TOOLS  /  F1",new Rect2(70,370,430,65),()=>{Run.SetDevEnabled(true);Run.DevTools.Toggle();},false,"OpenDevTools");
         Text(root,"TAKE A BREATH",new Rect2(640,250,900,50),22,Amber);
         Text(root,"The ember waits.",new Rect2(632,320,1020,100),65,Cream);
         Button(root,"RESUME",new Rect2(640,508,640,75),Run.TogglePause,true,"Resume");
@@ -167,6 +176,11 @@ public partial class Hud : CanvasLayer
         Text(root,$"{TimeText(Run.RunTime)}  TIME     /     {Run.Kills}  FALLEN     /     {Run.Player.Build.Artifacts.Count}  RELICS\n{Run.Player.Flame.Current:0} / {Run.Player.Flame.Maximum:0}  FLAME     •     SEED {Run.Seed}",new Rect2(145,677,1150,85),23,Cream);
         Button(root,victory?"NEW RUN   →":"RETRY   →",new Rect2(145,827,430,80),()=>Run.StartRun(),true,"Retry");
         Button(root,"MAIN MENU",new Rect2(600,827,310,80),Run.ShowMenu,false,"MainMenu");
+    }
+    private void AddDevToggle(Control parent,Vector2 position)
+    {
+        var toggle=new CheckButton {Name="DevModeToggle",Text="DEV MODE  •  F1 opens tools",Position=position,Size=new Vector2(490,48),ButtonPressed=Run.DevEnabled};
+        toggle.AddThemeFontSizeOverride("font_size",21);toggle.Toggled+=Run.SetDevEnabled;parent.AddChild(toggle);
     }
     private static ColorRect Panel(Control parent,Rect2 rect,Color color)
     {

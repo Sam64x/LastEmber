@@ -30,7 +30,11 @@ public partial class RunManager : Node
     public List<Enemy> Enemies { get; } = new();
     public List<EmberLight> Lights { get; } = new();
     public List<ArtifactData> Artifacts { get; } = new();
-    public List<ArtifactData> Offered { get; } = new();
+    public List<RewardOption> Offered { get; } = new();
+    public RewardGenerator Rewards { get; } = new();
+    public bool DevEnabled { get; private set; }
+    public bool DevInvulnerable { get; set; }
+    public DevPanel DevTools { get; private set; } = null!;
     public bool TestMode { get; private set; }
     public bool ShrineAvailable => _stageResolved && !_roomRewardTaken && CurrentStage!=StageKind.Altar && CurrentStage!=StageKind.Boss && StageIndex>0;
     private Node2D _world = null!, _transient = null!;
@@ -53,9 +57,11 @@ public partial class RunManager : Node
         foreach(var file in ResourceLoader.ListDirectory("res://Resources/Artifacts"))
             if(file.EndsWith(".tres")) Artifacts.Add(ResourceLoader.Load<ArtifactData>("res://Resources/Artifacts/"+file));
         Artifacts.Sort((a,b)=>string.CompareOrdinal(a.Id,b.Id));
+        Rewards.Load();
         Audio = new GameAudio(); AddChild(Audio);
         Music = new MusicDirector { Run=this };AddChild(Music);Audio.StrongSoundPlayed+=Music.Duck;
         Hud = new Hud { Run = this }; AddChild(Hud);
+        DevTools=new DevPanel {Run=this};AddChild(DevTools);
         ShowMenu();
         var args = OS.GetCmdlineUserArgs();
         TestMode = Array.Exists(args,a=>a=="--self-test");
@@ -72,12 +78,26 @@ public partial class RunManager : Node
         void KeyAction(string name,Key key) { if(!InputMap.HasAction(name)) InputMap.AddAction(name); InputMap.ActionAddEvent(name,new InputEventKey { PhysicalKeycode=key }); }
         KeyAction("left",Key.A);KeyAction("right",Key.D);KeyAction("up",Key.W);KeyAction("down",Key.S);
         KeyAction("dash",Key.Space);KeyAction("pause",Key.Escape);KeyAction("interact",Key.E);
-        KeyAction("reveal",Key.Q);
+        KeyAction("reveal",Key.Q);KeyAction("dev_tools",Key.F1);
         foreach(var pair in new[] {("melee",MouseButton.Left)})
         { if(!InputMap.HasAction(pair.Item1)) InputMap.AddAction(pair.Item1); InputMap.ActionAddEvent(pair.Item1,new InputEventMouseButton { ButtonIndex=pair.Item2 }); }
     }
+    public override void _Input(InputEvent input)
+    {
+        if(!Playing||!IsInstanceValid(Player)||Player.Automated)return;
+        if(input.IsActionPressed("melee"))Player.CaptureMeleeInput(true);
+        else if(input.IsActionReleased("melee"))Player.CaptureMeleeInput(false);
+    }
+    public override void _Notification(int what)
+    {
+        if(what==NotificationApplicationFocusOut&&IsInstanceValid(Player))Player.SuppressUiClick();
+    }
     public override void _UnhandledInput(InputEvent input)
     {
+        if(input.IsActionPressed("dev_tools") && DevEnabled)
+        {DevTools.Toggle();GetViewport().SetInputAsHandled();return;}
+        if(input.IsActionPressed("pause") && DevTools.Open)
+        {DevTools.Close();GetViewport().SetInputAsHandled();return;}
         if(input.IsActionPressed("pause")) { TogglePause(); GetViewport().SetInputAsHandled(); }
         if(input.IsActionPressed("interact") && Playing)
         {
@@ -88,6 +108,7 @@ public partial class RunManager : Node
     }
     private void NewWorld()
     {
+        DevTools.Close();
         _hitStop=0;
         if(IsInstanceValid(_world)) { RemoveChild(_world); _world.QueueFree(); }
         Enemies.Clear();Lights.Clear();_fires.Clear();
@@ -122,7 +143,7 @@ public partial class RunManager : Node
     {
         if(IsInstanceValid(Room) && Room.GetParent()==_world) { _world.RemoveChild(Room);Room.QueueFree(); }
         if(IsInstanceValid(_transient) && _transient.GetParent()==_world) { _world.RemoveChild(_transient);_transient.QueueFree(); }
-        Enemies.Clear();Player.ResetForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
+        Enemies.Clear();Player.ResetForRoom();Fx.ClearForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
         _transient=new Node2D();_world.AddChild(_transient);
         var rooms=Dungeon.Definition.Rooms;
         Room=(rooms.Count>0?rooms[StageIndex%rooms.Count]:ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn")).Instantiate<Room>();
@@ -221,6 +242,7 @@ public partial class RunManager : Node
     public void OnEnemyKilled(Enemy enemy,bool burning)
     {
         Enemies.Remove(enemy);Kills++;
+        Player.Melee.OnEnemyKilled(enemy,burning);
         if(enemy.Kind!=EnemyKind.Boss && _rng.Randf()<.28f)
         {
             float amount=_rng.RandiRange(3,5);
@@ -258,22 +280,14 @@ public partial class RunManager : Node
     {
         if(!Playing||!ShrineAvailable||Player.Position.DistanceTo(Room.ShrinePosition)>=90)return;
         Offered.Clear();
-        var pool=new List<ArtifactData>();
-        foreach(var item in Artifacts)if(item.Effect!=ArtifactEffect.BurstRadius&&(item.Stackable||!Player.Build.Owns(item.Id)))pool.Add(item);
-        while(Offered.Count<3&&pool.Count>0)
-        {
-            float total=0; foreach(var item in pool)total+=RewardWeight(item);
-            float roll=_rng.Randf()*total;var chosen=pool[^1];
-            foreach(var item in pool){roll-=RewardWeight(item);if(roll<=0){chosen=item;break;}}
-            Offered.Add(chosen);pool.Remove(chosen);
-        }
+        Offered.AddRange(Rewards.Generate(Player,Artifacts,_rng,RewardWeight));
         State=RunState.Reward;GetTree().Paused=true;Hud.ShowRewards();
     }
     public float RewardWeight(ArtifactData item)=>Player.Build.Has(ArtifactEffect.DarkRewards)?1+item.Rarity*1.5f:4-item.Rarity*.65f;
     public bool ChooseReward(int index)
     {
         if(State!=RunState.Reward||index<0||index>=Offered.Count)return false;
-        if(!Player.Build.Apply(Offered[index],Player.Flame))return false;
+        if(!Offered[index].Acquire(Player))return false;
         _roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Offered.Clear();
         State=RunState.Playing;GetTree().Paused=false;Hud.ShowHud();Audio.Play("reward");Hud.Toast("RELIC BOUND • CROSS THE EASTERN GATE");return true;
     }
@@ -297,7 +311,7 @@ public partial class RunManager : Node
     }
     public void TogglePause()
     {
-        if(State==RunState.Playing){State=RunState.Pause;GetTree().Paused=true;Hud.ShowPause();}
+        if(State==RunState.Playing){State=RunState.Pause;Player.SuppressUiClick();GetTree().Paused=true;Hud.ShowPause();}
         else if(State==RunState.Pause){State=RunState.Playing;GetTree().Paused=false;Hud.ShowHud();}
     }
     public void EndRun(bool victory)
@@ -310,6 +324,32 @@ public partial class RunManager : Node
         if(!Playing || index<0 || index>=Dungeons.Count)return;
         Player.ResetForRoom();DungeonIndex=index;Dungeon.Enter(Dungeons[index]);_ambient.Color=Dungeon.Definition.Ambient;
         StageIndex=0;LoadStage();
+    }
+    public void SetDevEnabled(bool enabled)
+    {
+        DevEnabled=enabled;
+        if(!enabled){DevInvulnerable=false;DevTools.Close();}
+    }
+    public void DevSpawnTarget(bool armored=false,bool fire=false)
+    {
+        if(!DevEnabled || State is not (RunState.Playing or RunState.Pause))return;
+        for(int i=0;i<12;i++)
+        {
+            var point=Player.Position+Vector2.FromAngle(i*Mathf.Tau/12)*115;
+            if(!Room.IsFree(point,24)||Enemies.Exists(enemy=>!enemy.Dead&&enemy.Position.DistanceTo(point)<53))continue;
+            var enemy=new Enemy {Run=this,Position=point,Kind=EnemyKind.Ashling,MaxHealth=160,TrainingDummy=true,IceArmored=armored,FireAligned=fire};
+            Enemies.Add(enemy);_transient.AddChild(enemy);return;
+        }
+        Hud.Toast("No clear space for a target. Move away from walls.");
+    }
+    public void DevClearTargets()
+    {
+        if(!DevEnabled)return;
+        foreach(var enemy in Enemies.ToArray())
+        {
+            if(!enemy.TrainingDummy)continue;
+            Enemies.Remove(enemy);enemy.BreakTether();enemy.QueueFree();
+        }
     }
     private void NextDungeon()=>SwitchDungeon(DungeonIndex+1);
     private void StartAttunementCapture()=>AddChild(new AttunementCapture {Run=this});

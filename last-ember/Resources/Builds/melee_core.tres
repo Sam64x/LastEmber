@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CoreData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/CoreData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 0
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "melee_core"
+DisplayName = "Melee Core"
+Description = "Strike becomes a 3-hit chain: 100%, 115%, 150%. Third swing knocks back and bursts into fire. Idle or Dash resets the chain."
+Tags = PackedStringArray("Melee")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

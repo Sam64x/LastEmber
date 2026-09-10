@@ -10,3 +10,4 @@ Description = "Every third melee hit ignites its target for 30 damage over 3 sec
 Rarity = 2
 Effect = 2
 Value = 1
+Tags = PackedStringArray("Melee", "Burn")

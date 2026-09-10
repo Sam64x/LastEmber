@@ -15,7 +15,32 @@ public partial class Effects : Node2D
     }
     private readonly List<Particle> _particles = new();
     private readonly RandomNumberGenerator _rng = new();
-    public override void _Ready() { ZIndex = 25; _rng.Randomize(); }
+    private readonly CriticalLightningFx[] _criticalPool=new CriticalLightningFx[8];
+    private ulong _criticalSeed;
+    public override void _Ready()
+    {
+        ZIndex=25;_rng.Randomize();
+        for(int i=0;i<_criticalPool.Length;i++){_criticalPool[i]=new CriticalLightningFx();AddChild(_criticalPool[i]);}
+    }
+    public void CriticalImpact(Vector2 position,Vector2 direction,float intensity,bool blue)
+    {
+        if(intensity<=0)return;
+        foreach(var effect in _criticalPool)
+        {
+            if(effect.Active)continue;
+            effect.Begin(position,direction,intensity,blue,++_criticalSeed*7919);return;
+        }
+    }
+    public void ClearForRoom()
+    {
+        _particles.Clear();
+        foreach(var child in GetChildren())
+        {
+            if(child is CriticalLightningFx critical)critical.Cancel();
+            else {if(child is CanvasItem canvas)canvas.Hide();child.QueueFree();}
+        }
+        QueueRedraw();
+    }
     public void Sparks(Vector2 position, Color color, int count = 10)
     {
         for (int i = 0; i < count && _particles.Count < 700; i++)

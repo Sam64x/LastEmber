@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 16
+Value = 60
+[resource]
+script = ExtResource("1")
+Id = "wildfire"
+DisplayName = "Wildfire"
+Description = "A burning enemy releases 60 Heat to nearby enemies on death. Walls stop the spread."
+Tags = PackedStringArray("Melee", "Burn", "Heat")
+RequiredIds = PackedStringArray("burn_core")
+RequiredTags = PackedStringArray("Melee", "Burn")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

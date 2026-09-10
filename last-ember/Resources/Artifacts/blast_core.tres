@@ -6,7 +6,8 @@
 script = ExtResource("1")
 Id = "blast_core"
 DisplayName = "Blast Core"
-Description = "Flame Burst radius +30%. Catch more shadows in a single wave."
+Description = "Melee fire waves gain 30% radius."
 Rarity = 1
 Effect = 4
 Value = 0.3
+Tags = PackedStringArray("Melee", "Heavy")

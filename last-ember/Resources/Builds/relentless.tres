@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 6
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "relentless"
+DisplayName = "Relentless"
+Description = "Dash preserves your 3-strike sequence and hit streak. Inactivity can still break the combo."
+Tags = PackedStringArray("Melee", "Combo", "Mobility")
+RequiredIds = PackedStringArray("combo_core")
+RequiredTags = PackedStringArray("Melee", "Combo")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

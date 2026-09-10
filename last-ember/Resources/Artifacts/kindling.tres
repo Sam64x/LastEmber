@@ -10,3 +10,4 @@ Description = "Burning enemies explode on death for 18 damage in a small radius.
 Rarity = 3
 Effect = 7
 Value = 1
+Tags = PackedStringArray("Burn")

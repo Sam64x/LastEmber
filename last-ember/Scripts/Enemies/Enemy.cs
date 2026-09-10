@@ -38,6 +38,25 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
         if(impact==DungeonImpact.Blast)TakeDamage(new DamageInfo(FireAligned && Weakened>0?18:10,origin,300));
     }
     public bool FrozenForTest { get; set; }
+    public bool TrainingDummy { get; set; }
+    public float Heat { get; private set; }
+    public float WeakPointRemaining { get; private set; }
+    private float _heatGrace, _stagger;
+    public void OpenWeakPoint(float seconds=.85f)=>WeakPointRemaining=Mathf.Max(WeakPointRemaining,seconds);
+    public void ConsumeWeakPoint()=>WeakPointRemaining=0;
+    public void Stagger(float seconds){_stagger=Mathf.Max(_stagger,seconds);OpenWeakPoint(seconds);}
+    public void BreakArmor()
+    {
+        if(!IceArmored)return;IceArmored=false;
+        Run.Fx.Sparks(Position,new Color(.65f,.9f,1),15);Run.Audio.Play("ice_crack");
+    }
+    public void AddHeat(float amount)
+    {
+        if(Dead || amount<=0)return;
+        Heat+=amount;_heatGrace=2;
+        if(Heat>=100){Heat=Mathf.Min(99,Heat-100);Burn.Apply();Run.Fx.Text(Position-new Vector2(0,38),"IGNITED",FlamePalette.Fire(Run.Player.Flame.LastEmber));}
+        QueueRedraw();
+    }
     public bool WindingUp => Telegraph > 0;
 
     public override void _Ready()
@@ -63,6 +82,7 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
             _tether.AddPoint(Vector2.Zero);_tether.AddPoint(Vector2.Zero);
             AddChild(_tether);
         }
+        AddChild(new EnemyStatusFx {Enemy=this});
         ZIndex = 7;
         _stepClock = Mathf.PosMod(Position.X * .017f + Position.Y * .013f, 1.6f);
     }
@@ -77,10 +97,20 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
         if (Dead || !Run.Playing) return;
         float dt = (float)delta;
         Clock += dt; Flash = Mathf.Max(0, Flash - dt); Cooldown -= dt; _tetherGrace -= dt;
-        if (Burn.Tick(dt)) TakeDamage(new DamageInfo(5*Run.Player.Flame.LastEmberDamageMultiplier, Position, 0, IsBurnTick:true));
+        if (Burn.Tick(dt)) TakeDamage(new DamageInfo(5*Run.Player.Flame.LastEmberDamageMultiplier*Run.Player.Melee.BurnDamageMultiplier, Position, 0, IsBurnTick:true));
         if (Dead) return;
         Weakened=Mathf.Max(0,Weakened-dt);
-        if (!FrozenForTest) Behave(dt);
+        WeakPointRemaining=Mathf.Max(0,WeakPointRemaining-dt);
+        _heatGrace-=dt;if(_heatGrace<=0)Heat=Mathf.Max(0,Heat-dt*12);
+        if(_stagger>0 || TrainingDummy)
+        {
+            _stagger=Mathf.Max(0,_stagger-dt);Velocity=Knockback;Knockback=Knockback.MoveToward(Vector2.Zero,dt*700);MoveAndSlide();
+        }
+        else if (!FrozenForTest && !TrainingDummy)
+        {
+            bool winding=Telegraph>0;Behave(dt);
+            if(winding&&Telegraph<=0)OpenWeakPoint();
+        }
         QueueRedraw();
     }
     protected virtual void Behave(float dt)
@@ -209,7 +239,7 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
         Flash = .13f; Active = true;
         Knockback = (Position - hit.Origin).Normalized() * hit.Knockback;
         Run.Fx.Sparks(Position, FlamePalette.Fire(Run.Player.Flame.LastEmber), 7);
-        Run.Fx.Text(Position - new Vector2(0, BodyRadius + 12), $"{hit.Amount:0}", new Color(1, .87f, .65f));
+        Run.Fx.Text(Position - new Vector2(0, BodyRadius + 12), $"{(hit.Critical?"CRIT ":"")}{hit.Amount:0}", hit.Critical?new Color(1,.95f,.3f):new Color(1, .87f, .65f));
         if(!hit.Strike)Run.Audio.Play("hit");
         if (Health > 0) return;
         Dead = true;

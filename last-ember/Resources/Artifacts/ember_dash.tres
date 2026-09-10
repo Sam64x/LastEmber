@@ -10,3 +10,4 @@ Description = "Dash leaves burning ground. Enemies crossing it take damage and i
 Rarity = 2
 Effect = 3
 Value = 1
+Tags = PackedStringArray("Mobility", "Burn")

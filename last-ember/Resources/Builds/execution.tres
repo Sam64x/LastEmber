@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 10
+Value = 0.3
+[resource]
+script = ExtResource("1")
+Id = "execution"
+DisplayName = "Execution"
+Description = "Gain +30 percentage points of crit chance against enemies at or below 30% health."
+Tags = PackedStringArray("Melee", "Crit")
+RequiredIds = PackedStringArray("crit_core")
+RequiredTags = PackedStringArray("Melee", "Crit")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

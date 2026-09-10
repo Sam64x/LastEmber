@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SubCoreData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/SubCoreData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 2
+Value = 0.1
+[resource]
+script = ExtResource("1")
+Id = "crit_core"
+DisplayName = "Crit"
+Description = "10% crit chance; crits deal 175% damage. Hit a yellow weak point during enemy recovery for a guaranteed crit."
+Tags = PackedStringArray("Melee", "Crit")
+RequiredIds = PackedStringArray("melee_core")
+RequiredTags = PackedStringArray("Melee")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

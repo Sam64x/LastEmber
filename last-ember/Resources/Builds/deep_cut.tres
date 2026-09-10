@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 9
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "deep_cut"
+DisplayName = "Deep Cut"
+Description = "Critical melee strikes immediately ignite their target, even without the Burn specialization."
+Tags = PackedStringArray("Melee", "Crit", "Burn")
+RequiredIds = PackedStringArray("crit_core")
+RequiredTags = PackedStringArray("Melee", "Crit")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

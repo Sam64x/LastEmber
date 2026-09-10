@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 11
+Value = 0.2
+[resource]
+script = ExtResource("1")
+Id = "chain_reaction"
+DisplayName = "Chain Reaction"
+Description = "A crit grants +20 percentage points of crit chance to your next melee hit within 2.5 seconds."
+Tags = PackedStringArray("Melee", "Crit", "Combo")
+RequiredIds = PackedStringArray("crit_core")
+RequiredTags = PackedStringArray("Melee", "Crit")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

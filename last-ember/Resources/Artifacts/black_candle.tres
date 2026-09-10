@@ -10,3 +10,4 @@ Description = "Deal 50% more damage while below 30% Flame."
 Rarity = 2
 Effect = 1
 Value = 0.5
+Tags = PackedStringArray("Melee", "LastEmber")

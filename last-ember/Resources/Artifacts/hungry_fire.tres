@@ -10,3 +10,4 @@ Description = "Embers dropped by burning enemies restore 3 extra Flame. Drop cha
 Rarity = 2
 Effect = 8
 Value = 3
+Tags = PackedStringArray("Burn", "Flame")

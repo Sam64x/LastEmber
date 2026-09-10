@@ -33,6 +33,7 @@ public partial class Extinguisher : Enemy
                     if (Run.Player.Position.DistanceTo(center) < _attackRadius) Run.Player.TakeDamage(new DamageInfo(15, center, 210));
                     Run.Shake(6);
                 }
+                OpenWeakPoint();
                 _recovery = Phase == 3 ? 1.45f : Phase == 2 ? 1.8f : 2.3f;
             }
             return;
@@ -41,6 +42,7 @@ public partial class Extinguisher : Enemy
         {
             _charge -= dt; Velocity = _chargeDirection * 780; MoveAndSlide();
             if (Position.DistanceTo(Run.Player.Position) < 74) Run.Player.TakeDamage(new DamageInfo(15, Position, 240));
+            if(_charge<=0)OpenWeakPoint();
             Run.Fx.Ghost(Position);
             return;
         }

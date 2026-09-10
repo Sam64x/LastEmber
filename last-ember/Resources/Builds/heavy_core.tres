@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SubCoreData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/SubCoreData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 3
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "heavy_core"
+DisplayName = "Heavy"
+Description = "Hold LMB, release to strike. Full charge triples strike damage, breaks armor and releases a fire wave. Taps still combo."
+Tags = PackedStringArray("Melee", "Heavy")
+RequiredIds = PackedStringArray("melee_core")
+RequiredTags = PackedStringArray("Melee")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

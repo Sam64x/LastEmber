@@ -10,3 +10,4 @@ Description = "Light radius −30%. Future reward choices favor rarer relics."
 Rarity = 3
 Effect = 9
 Value = 0.3
+Tags = PackedStringArray("Flame")

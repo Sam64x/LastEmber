@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="MeleePresentationData" load_steps=8 format=3]
+[ext_resource type="Script" path="res://Scripts/Combat/MeleePresentationData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Combat/StrikeStyleData.cs" id="2"]
+[sub_resource type="Resource" id="Basic"]
+script = ExtResource("2")
+Label = "Strike"
+Interval = 0.5
+[sub_resource type="Resource" id="First"]
+script = ExtResource("2")
+Label = "Cut"
+Windup = 0.065
+Interval = 0.42
+StartAngle = -1.25
+EndAngle = 1.05
+Width = 19.0
+BodyImpulse = 7.0
+SoundCharacter = 0
+[sub_resource type="Resource" id="Second"]
+script = ExtResource("2")
+Label = "Backhand"
+Windup = 0.075
+Interval = 0.38
+SweepSeconds = 0.095
+TailSeconds = 0.24
+StartAngle = 1.55
+EndAngle = -1.5
+Width = 23.0
+BodyImpulse = 9.0
+HitStop = 0.033
+Shake = 2.6
+SoundCharacter = 1
+[sub_resource type="Resource" id="Third"]
+script = ExtResource("2")
+Label = "Cinder cleave"
+Windup = 0.11
+Interval = 0.58
+SweepSeconds = 0.14
+TailSeconds = 0.3
+StartAngle = -1.68
+EndAngle = 1.68
+Width = 34.0
+BodyImpulse = 12.0
+HitStop = 0.047
+Shake = 4.0
+Cleave = true
+SoundCharacter = 2
+SoundGainDb = 1.0
+[sub_resource type="Resource" id="Heavy"]
+script = ExtResource("2")
+Label = "Charged cleave"
+Windup = 0.12
+Interval = 0.62
+SweepSeconds = 0.14
+TailSeconds = 0.3
+StartAngle = -1.68
+EndAngle = 1.68
+Width = 35.0
+BodyImpulse = 13.0
+HitStop = 0.055
+Shake = 4.5
+Cleave = true
+SoundCharacter = 2
+SoundGainDb = 1.0
+[resource]
+script = ExtResource("1")
+ClickWindow = 0.18
+InputBuffer = 0.24
+ChargedComboGrace = 0.75
+BasicStrike = SubResource("Basic")
+ChargedStrike = SubResource("Heavy")
+Strikes = Array[ExtResource("2")]([SubResource("First"), SubResource("Second"), SubResource("Third")])

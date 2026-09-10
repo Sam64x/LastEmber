@@ -10,3 +10,4 @@ Description = "Move 30% faster while below 15 Flame."
 Rarity = 1
 Effect = 6
 Value = 0.3
+Tags = PackedStringArray("Mobility", "LastEmber")

@@ -16,6 +16,8 @@ public partial class GameAudio : Node
     private float _time;
     public float Volume {get;private set;}=.8f;
     public event Action? StrongSoundPlayed;
+    public MeleeSoundBank MeleeBank { get; } = new();
+    public void EmphasizeCombat()=>StrongSoundPlayed?.Invoke();
     public override void _Ready()
     {
         ProcessMode=ProcessModeEnum.Always;
@@ -59,6 +61,7 @@ public partial class GameAudio : Node
         _sounds["backdraft_in"]=Texture(.65f,80,650,.92f,304);
         _sounds["backdraft_blast"]=Tone(95,28,.65f,.6f);
         _sounds["cold_flame"]=Texture(.5f,1400,400,.75f,305);
+        MeleeBank.Warm();
         SetVolume(Volume);
     }
     public override void _Process(double delta){_time+=(float)delta;}
@@ -122,7 +125,7 @@ public partial class GameAudio : Node
         foreach(var voice in _voices)if(IsInstanceValid(voice)){voice.Stop();voice.Stream=null;}
         foreach(var voice in _spatial)if(IsInstanceValid(voice)){voice.Stop();voice.Stream=null;}
     }
-    public override void _ExitTree(){StopAll();_sounds.Clear();}
+    public override void _ExitTree(){StopAll();_sounds.Clear();MeleeBank.Dispose();}
     private static AudioStreamWav Texture(float duration,float from,float to,float noise,int seed)
     {
         const int rate=22050;int count=(int)(duration*rate);var data=new byte[count*2];var random=new Random(seed);

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 18
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "blue_fire"
+DisplayName = "Blue Fire"
+Description = "Burn damage is doubled while you are in Last Ember. Applies to enemies already burning too."
+Tags = PackedStringArray("Melee", "Burn", "LastEmber")
+RequiredIds = PackedStringArray("burn_core")
+RequiredTags = PackedStringArray("Melee", "Burn")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

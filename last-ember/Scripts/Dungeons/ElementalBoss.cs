@@ -27,7 +27,7 @@ public partial class ElementalBoss : Enemy
                     IceArmored=true;
                 }
                 else for(int i=0;i<16;i++)Run.Shoot(Position,Position+Vector2.FromAngle(i*Mathf.Tau/16),235,10,true);
-                _attack=3.5f;
+                OpenWeakPoint(1.2f);_attack=3.5f;
             }
         }
     }

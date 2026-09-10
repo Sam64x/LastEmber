@@ -1,84 +1,183 @@
 using Godot;
-
 namespace LastEmber;
 
-// A reusable, emissive flame ribbon. Seeded ripples keep its edge alive without frame-to-frame flicker.
+// Reusable overlapping trails; contact origins are frozen in world space.
 public partial class FireStrikeFx : Node2D
 {
-    public bool Blue {get;set;}
-    private float _age,_strength,_seed;
-    private bool _active,_released;
-    private Vector2 _aim;
+    private sealed class Stroke
+    {
+        public bool Active,Released;
+        public StrikeStyleData Style=null!;
+        public Vector2 Aim,Origin;
+        public float Age,Power,Size,Windup,Sweep,Tail,Seed,Charge;
+    }
+    public bool Blue { get; set; }
+    private readonly Stroke[] _strokes={new(),new(),new()};
+    private readonly Vector2[] _ribbon=new Vector2[98],_blade=new Vector2[4];
+    private readonly StrikeStyleData _basic=new();
+    private int _slot=-1,_serial;
+    private bool _charging;
+    private Vector2 _chargeAim;
+    private float _charge,_chargeAge,_fullAge;
+    private Stroke? Current=>_slot<0?null:_strokes[_slot];
+    public Vector2 BodyOffset
+    {
+        get
+        {
+            if(_charging)return -_chargeAim*(3+5*_charge);
+            var s=Current;if(s==null||!s.Active)return Vector2.Zero;
+            return s.Aim*(s.Released?s.Style.BodyImpulse*Mathf.Exp(-s.Age*19):-6*Mathf.SmoothStep(0,1,Mathf.Clamp(s.Age/s.Windup,0,1)));
+        }
+    }
+    public float BodyRotation
+    {
+        get
+        {
+            var s=Current;if(_charging||s==null||!s.Active)return 0;
+            float sign=Mathf.Sign(s.Style.EndAngle-s.Style.StartAngle);
+            return sign*(s.Released?.11f*Mathf.Exp(-s.Age*17):-.1f*Mathf.Clamp(s.Age/s.Windup,0,1));
+        }
+    }
+    public Vector2 BodyScale
+    {
+        get
+        {
+            if(_charging)return new Vector2(1-.08f*_charge,1+.1f*_charge);
+            var s=Current;if(s==null||!s.Active)return Vector2.One;
+            float deformation=s.Released?.11f*Mathf.Exp(-s.Age*20):-.06f*Mathf.Clamp(s.Age/s.Windup,0,1);
+            return new Vector2(1+deformation,1-deformation*.75f);
+        }
+    }
     public override void _Ready()
     {
-        ZIndex=18;
-        Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
+        ZIndex=18;Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
     }
-    public void Begin(Vector2 aim,float strength)
+    public void Begin(Vector2 aim,float strength)=>Begin(aim,strength,_basic,1,.065f,1,0);
+    public void Begin(Vector2 aim,float strength,StrikeStyleData style,float size,float windup,float tempo,float charge)
     {
-        _aim=aim;_strength=strength;_age=0;_seed+=2.39f;_active=true;_released=false;QueueRedraw();
+        _charging=false;_slot=(_slot+1)%_strokes.Length;
+        var s=_strokes[_slot];s.Active=true;s.Released=false;s.Style=style;s.Aim=aim;s.Age=0;
+        s.Power=Mathf.Clamp(strength,0,1);s.Size=size;s.Windup=Mathf.Max(.02f,windup);
+        s.Sweep=Mathf.Max(.045f,style.SweepSeconds/Mathf.Sqrt(tempo));s.Tail=Mathf.Max(.09f,style.TailSeconds/Mathf.Sqrt(tempo));
+        s.Seed=++_serial*2.39f;s.Charge=charge;QueueRedraw();
     }
-    public void Release(){_released=true;_age=.018f;QueueRedraw();}
-    public void Clear(){_active=false;QueueRedraw();}
+    public void Release()
+    {
+        var s=Current;if(s==null)return;
+        s.Released=true;s.Age=0;s.Origin=GlobalPosition;QueueRedraw();
+    }
+    public void ShowCharge(Vector2 aim,float ratio)
+    {
+        if(!_charging){_chargeAge=0;_fullAge=0;}
+        _charging=true;_chargeAim=aim;_charge=ratio;QueueRedraw();
+    }
+    public void StopCharge(){_charging=false;_charge=0;QueueRedraw();}
+    public void Clear(){foreach(var s in _strokes)s.Active=false;StopCharge();QueueRedraw();}
     public override void _Process(double delta)
     {
-        if(!_active)return;
-        _age+=(float)delta;
-        if(_released&&_age>.27f)_active=false;
-        QueueRedraw();
+        float dt=(float)delta;bool redraw=_charging;
+        if(_charging){_chargeAge+=dt;if(_charge>=1)_fullAge+=dt;}
+        foreach(var s in _strokes)
+        {
+            if(!s.Active)continue;redraw=true;s.Age+=dt;
+            if(s.Released&&s.Age>s.Sweep+s.Tail)s.Active=false;
+        }
+        if(redraw){QueueRedraw();if(GetParent() is CanvasItem body)body.QueueRedraw();}
     }
     public override void _Draw()
     {
-        if(!_active)return;
-        float power=Mathf.Lerp(.25f,1,_strength);
-        if(Blue)power=Mathf.Max(power,.65f);
-        if(!_released)
+        for(int i=1;i<=_strokes.Length;i++)
         {
-            float charge=Mathf.Clamp(_age/.06f,0,1);
-            var center=_aim*(28-charge*7);
-            for(int i=0;i<7;i++)
+            var s=_strokes[(_slot+i+_strokes.Length)%_strokes.Length];if(!s.Active)continue;
+            Vector2 origin=s.Released?ToLocal(s.Origin):Vector2.Zero;
+            if(!s.Released)
             {
-                var d=Vector2.FromAngle(i*Mathf.Tau/7+_seed+charge*.9f);
-                DrawLine(center+d*(20-charge*12),center+d*4,FlamePalette.Shift(new Color(1,.32f,.045f,power*charge),Blue),2);
+                float ready=Mathf.Clamp(s.Age/s.Windup,0,1);
+                var palm=s.Aim.Rotated(s.Style.StartAngle)*(22+ready*14);
+                DrawCircle(palm,3+ready*5,FlamePalette.Shift(new Color(1,.55f,.16f,.8f*ready),Blue));
+                if(ready>.65f)Ribbon(s,origin,Mathf.Lerp(s.Style.StartAngle,0,(ready-.65f)/.35f),.4f*ready);
+                continue;
             }
-            DrawCircle(center,4+charge*6,FlamePalette.Shift(new Color(1,.65f,.16f,power),Blue));
-            DrawCircle(center,2+charge*3,FlamePalette.Shift(new Color(1,.96f,.78f,power),Blue));
-            return;
+            float progress=1-Mathf.Pow(1-Mathf.Clamp(s.Age/s.Sweep,0,1),3);
+            float fade=1-Mathf.SmoothStep(s.Sweep*.3f,s.Sweep+s.Tail,s.Age);
+            float head=Mathf.Lerp(0,s.Style.EndAngle,progress);
+            Ribbon(s,origin,head,fade);
+            if(s.Style.Cleave||s.Charge>=.999f)Cleave(s,origin,fade);
+            Cinders(s,origin,fade);
         }
-        float head=Mathf.Lerp(-1.38f,1.38f,Mathf.Clamp(_age/.10f,0,1));
-        float fade=1-Mathf.SmoothStep(.075f,.27f,_age);
-        Color[] colors={new( .72f,.045f,.008f),new(1,.24f,.015f),new(1,.73f,.08f),new(1,.98f,.83f)};
-        float[] widths={1,.7f,.39f,.14f};
-        const int segments=40;
+        if(_charging)ChargeFilaments();
+    }
+    private void Ribbon(Stroke s,Vector2 origin,float head,float fade)
+    {
+        if(Mathf.Abs(head-s.Style.StartAngle)<.01f)return;
+        float power=Blue?Mathf.Max(.7f,s.Power):Mathf.Lerp(.5f,1,s.Power);
         for(int layer=0;layer<4;layer++)
         {
-            var points=new Vector2[(segments+1)*2];
-            for(int i=0;i<=segments;i++)
+            float widthScale=layer==0?1.45f:layer==1?1:layer==2?.48f:.13f;
+            for(int i=0;i<=48;i++)
             {
-                float t=(float)i/segments;
-                float angle=Mathf.Lerp(-1.4f,head,t);
-                float ripple=Mathf.Sin(t*59+_seed-_age*31)*.55f+Mathf.Sin(t*103+_seed*3+_age*21)*.3f;
-                float taper=.08f+Mathf.Pow(Mathf.Max(0,Mathf.Sin(t*Mathf.Pi)),.6f);
-                float radius=82+Mathf.Sin(t*15+_seed)*5+_age*36;
-                float width=Mathf.Lerp(8,29,_strength)*widths[layer]*taper*(1+ripple*.5f)*fade;
-                var d=Vector2.FromAngle(_aim.Angle()+angle);
-                points[i]=d*(radius+width*(1+ripple*.3f));
-                points[points.Length-1-i]=d*(radius-width*.65f);
+                float t=i/48f,angle=Mathf.Lerp(s.Style.StartAngle,head,t);
+                float taper=Mathf.Pow(Mathf.Max(.001f,Mathf.Sin(t*Mathf.Pi)),.6f);
+                float ripple=Mathf.Sin(t*39+s.Seed-s.Age*24)*.35f+Mathf.Sin(t*77+s.Seed)*.18f;
+                float radius=(79+Mathf.Sin(t*8+s.Seed)*4)*s.Size;
+                float width=s.Style.Width*s.Size*widthScale*taper*fade*(1+ripple*.3f)*(1+s.Charge*.35f);
+                var direction=s.Aim.Rotated(angle);
+                _ribbon[i]=origin+direction*(radius+width);
+                _ribbon[97-i]=origin+direction*Mathf.Max(1,radius-width*.55f);
             }
-            var color=FlamePalette.Shift(colors[layer],Blue);color.A=fade*power;
-            DrawColoredPolygon(points,color);
-        }
-        // Detached tongues and coals move outwards along the sweep, then cool red.
-        for(int i=0;i<17;i++)
-        {
-            float angle=-1.35f+i*.164f;
-            if(angle>head)continue;
-            var d=Vector2.FromAngle(_aim.Angle()+angle);
-            float travel=_age*(65+i%5*24);
-            float radius=92+Mathf.Sin(i*17+_seed)*9+travel;
-            var p=d*radius;
-            var color=FlamePalette.Shift(new Color(1,Mathf.Lerp(.12f,.75f,fade),.035f,fade*power),Blue);
-            DrawLine(p-d*(4+i%4*2)*fade,p,color,Mathf.Lerp(1,3,_strength),true);
+            var color=layer switch
+            {
+                0=>new Color(.88f,.15f,.025f,fade*.12f),
+                1=>new Color(1,.31f,.035f,fade*.85f),
+                2=>new Color(1,.72f,.19f,fade),
+                _=>new Color(1,.98f,.83f,fade*.95f)
+            };
+            color=FlamePalette.Shift(color,Blue);color.A*=power;DrawColoredPolygon(_ribbon,color);
         }
     }
+    private void Cleave(Stroke s,Vector2 origin,float fade)
+    {
+        float flash=Mathf.Clamp(1-s.Age/.16f,0,1);if(flash<=0)return;
+        var axis=s.Aim;var across=axis.Orthogonal();float reach=101*s.Size;
+        for(int i=0;i<3;i++)
+        {
+            float width=(18-i*6)*flash;
+            _blade[0]=origin+axis*12-across*width;_blade[1]=origin+axis*reach;
+            _blade[2]=origin+axis*12+across*width;_blade[3]=origin-axis*4;
+            DrawColoredPolygon(_blade,FlamePalette.Shift(new Color(1,i==2?.97f:.55f,i==2?.8f:.12f,flash*(i==0?.18f:.6f)),Blue));
+        }
+        DrawArc(origin+axis*55,35+45*(1-flash),axis.Angle()-1.2f,axis.Angle()+1.2f,36,
+            FlamePalette.Shift(new Color(1,.8f,.35f,flash*fade*.55f),Blue),3,true);
+    }
+    private void Cinders(Stroke s,Vector2 origin,float fade)
+    {
+        for(int i=0;i<12;i++)
+        {
+            float t=i/11f;var direction=s.Aim.Rotated(Mathf.Lerp(s.Style.StartAngle,s.Style.EndAngle,t));
+            var p=origin+direction*(s.Size*90+s.Age*(45+i%4*26));
+            var color=FlamePalette.Shift(new Color(1,Mathf.Lerp(.2f,.8f,fade),.06f,fade*fade*.75f),Blue);
+            DrawLine(p-direction*(3+i%3*3)*fade,p,color,1.2f+i%2,true);
+        }
+    }
+    private void ChargeFilaments()
+    {
+        var center=_chargeAim*25;var fire=FlamePalette.Fire(Blue);
+        for(int i=0;i<6;i++)
+        {
+            float angle=i*Mathf.Tau/6+_chargeAge*(1+_charge);
+            var a=center+Vector2.FromAngle(angle)*(38-_charge*14);
+            var b=center+Vector2.FromAngle(angle+.35f)*13;
+            DrawLine(a,b,new Color(fire,.3f+_charge*.35f),1.4f+_charge,true);
+        }
+        DrawCircle(center,3+_charge*6,new Color(fire,.65f));
+        DrawCircle(center,2+_charge*3,new Color(1,1,1,.4f+_charge*.4f));
+        DrawArc(Vector2.Zero,31,-Mathf.Pi/2,-Mathf.Pi/2+Mathf.Tau*Mathf.Max(.01f,_charge),48,new Color(fire,.65f),2,true);
+        if(_charge>=1)
+        {
+            float flash=Mathf.Clamp(1-_fullAge/.18f,0,1);
+            DrawArc(center,12+(1-flash)*18,0,Mathf.Tau,40,new Color(1,1,1,flash*.7f),2,true);
+            DrawLine(center-new Vector2(0,9),center+new Vector2(0,9),new Color(1,1,1,.6f),1.5f,true);
+        }
+    }
+    public override void _ExitTree()=>_basic.Dispose();
 }

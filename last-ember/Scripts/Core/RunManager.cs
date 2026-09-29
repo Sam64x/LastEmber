@@ -9,11 +9,16 @@ public enum StageKind { Combat, Reward, Elite, Altar, Boss }
 
 public partial class RunManager : Node
 {
-    public static readonly StageKind[] Route = { StageKind.Combat, StageKind.Combat, StageKind.Reward, StageKind.Combat, StageKind.Elite, StageKind.Altar, StageKind.Combat, StageKind.Reward, StageKind.Combat, StageKind.Boss };
+    // Compatibility for old development tools. Live progression uses Graph.Exits.
+    public static readonly StageKind[] Route = { StageKind.Combat, StageKind.Combat, StageKind.Combat, StageKind.Combat, StageKind.Combat, StageKind.Elite, StageKind.Altar, StageKind.Reward, StageKind.Boss };
+    public DungeonGraph? Graph { get; private set; }
+    public DungeonRoom? CurrentRoomPlan => Graph?.Rooms[StageIndex];
+    public EncounterController? Encounter { get; private set; }
+    public int RoomCount => Graph?.Rooms.Count ?? Route.Length;
     public RunState State { get; private set; } = RunState.Menu;
     public bool Playing => State == RunState.Playing;
     public int StageIndex { get; private set; }
-    public StageKind CurrentStage => Route[Math.Clamp(StageIndex,0,Route.Length-1)];
+    public StageKind CurrentStage => CurrentRoomPlan?.Stage ?? Route[Math.Clamp(StageIndex,0,Route.Length-1)];
     public int Kills { get; private set; }
     public float RunTime { get; private set; }
     public ulong Seed { get; private set; }
@@ -41,9 +46,8 @@ public partial class RunManager : Node
     private Camera2D _camera = null!;
     private readonly RandomNumberGenerator _rng = new();
     private readonly List<FirePatch> _fires = new();
-    private float _shake, _clearDelay, _waveDelay;
+    private float _shake;
     private float _hitStop;
-    private int _wavesRemaining;
     private bool _stageResolved, _roomRewardTaken;
     private sealed class FirePatch { public Vector2 Position; public float Life=1.3f, Tick; }
 
@@ -101,6 +105,7 @@ public partial class RunManager : Node
         if(input.IsActionPressed("pause")) { TogglePause(); GetViewport().SetInputAsHandled(); }
         if(input.IsActionPressed("interact") && Playing)
         {
+            if(Encounter?.TryChallenge()==true)return;
             if(ShrineAvailable && Player.Position.DistanceTo(Room.ShrinePosition)<90) OpenRewards();
             else if(CurrentStage==StageKind.Altar && Player.Position.DistanceTo(Room.Bounds.GetCenter())<110 && !_stageResolved) OpenAltar();
             else if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<100 && Room.HasLineOfSight(Player.Position,Room.ExitPosition)) AdvanceStage();
@@ -120,6 +125,7 @@ public partial class RunManager : Node
     }
     public void ShowMenu()
     {
+        Graph=null;Encounter=null;
         GetTree().Paused=false; State=RunState.Menu; StageIndex=0;
         NewWorld();
         Room = ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn").Instantiate<Room>();
@@ -135,6 +141,7 @@ public partial class RunManager : Node
         NewWorld();
         Player=new Player { Run=this,Position=new Vector2(260,556),Automated=TestMode };_world.AddChild(Player);Lights.Add(Player.Light);
         DungeonIndex=Math.Clamp(dungeonIndex,0,Dungeons.Count-1);
+        GenerateDungeon();
         Dungeon.Enter(Dungeons[DungeonIndex]);_ambient.Color=Dungeon.Definition.Ambient;
         Music.ResetForRun();
         LoadStage(); Hud.ShowHud();
@@ -145,24 +152,26 @@ public partial class RunManager : Node
         if(IsInstanceValid(_transient) && _transient.GetParent()==_world) { _world.RemoveChild(_transient);_transient.QueueFree(); }
         Enemies.Clear();Player.ResetForRoom();Fx.ClearForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
         _transient=new Node2D();_world.AddChild(_transient);
-        var rooms=Dungeon.Definition.Rooms;
-        Room=(rooms.Count>0?rooms[StageIndex%rooms.Count]:ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn")).Instantiate<Room>();
-        Room.Run=this;Room.Layout=StageIndex<=3?StageIndex%8:_rng.RandiRange(0,7);Room.BossArena=CurrentStage==StageKind.Boss;
+        var plan=CurrentRoomPlan!;
+        Room=ResourceLoader.Load<PackedScene>("res://Scenes/Rooms/Room.tscn").Instantiate<Room>();
+        Room.Run=this;Room.Definition=plan.Geometry;Room.GeometrySeed=plan.Seed;
+        Room.Layout=plan.PropVariant;Room.BossArena=plan.Type==RoomType.Boss;
         _world.AddChild(Room);_world.MoveChild(Room,1);
         Dungeon.Populate(Room);
         Player.Position=Room.EntrancePosition;Player.Velocity=Vector2.Zero;
-        _stageResolved=false;_roomRewardTaken=false;_clearDelay=1;_waveDelay=2;
-        _wavesRemaining=CurrentStage==StageKind.Combat&&StageIndex>=3?1:0;
-        Hud.Toast(CurrentStage switch {StageKind.Elite=>"A STOLEN SUN • TORCHBEARER",StageKind.Altar=>"THE ALTAR • APPROACH AND PRESS E",StageKind.Boss=>"THE FURNACE • THE EXTINGUISHER",StageKind.Reward=>"A MOMENT OF WARMTH",_=>$"DISTRICT {StageIndex+1:00} • CLEAR THE ASH"});
-        if(CurrentStage==StageKind.Boss) Spawn(EnemyKind.Boss,new Vector2(1390,556));
-        else if(CurrentStage==StageKind.Elite) { Spawn(EnemyKind.Torchbearer,Room.MapPoint(new Vector2(1350,550)));SpawnWave(3); }
-        else if(CurrentStage==StageKind.Combat && StageIndex>0) SpawnWave(StageIndex==1?2:4+StageIndex/3);
-        else if(CurrentStage==StageKind.Reward) { _stageResolved=true;Room.QueueRedraw(); }
-        if(StageIndex==0) { _stageResolved=true;_roomRewardTaken=true;Room.Cleared=true;Room.QueueRedraw();Hud.Toast("WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE"); }
-        else if(StageIndex==1)Hud.Toast("Q • LIGHT SLOWS THE SHADES • COSTS 5 FLAME");
-        else if(StageIndex==3)Hud.Toast("LISTEN • SOME CREATURES ANSWER THE LIGHT");
-        if(CurrentStage is StageKind.Combat or StageKind.Elite)
-            Hud.Toast(Dungeon.Definition.DisplayName+" • "+Dungeon.Definition.Lesson);
+        _stageResolved=plan.Type is RoomType.Start or RoomType.Treasure;
+        _roomRewardTaken=plan.Type==RoomType.Start;
+        Room.Cleared=plan.Type is RoomType.Start or RoomType.RiskReward;
+        Encounter=new EncounterController {Run=this,Plan=plan};Room.AddChild(Encounter);
+        Hud.Toast(plan.Type switch
+        {
+            RoomType.Start => "WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE",
+            RoomType.Altar => "THE ALTAR • APPROACH AND PRESS E",
+            RoomType.Treasure => "A MOMENT OF WARMTH • E AT THE SHRINE",
+            RoomType.Boss => Dungeon.Definition.BossName.ToUpperInvariant(),
+            RoomType.Ability or RoomType.RiskReward => Encounter.Objective,
+            _ => plan.Geometry.Id.ToUpperInvariant()+" • "+Encounter.Objective
+        });
     }
     public Enemy Spawn(EnemyKind kind,Vector2 position)
     {
@@ -172,18 +181,6 @@ public partial class RunManager : Node
         enemy.ContactDamage*=Mathf.Max(0,Dungeon.Definition.EnemyDamageMultiplier);
         Fx.Ring(position,45,new Color(.75f,.3f,.2f));
         return enemy;
-    }
-    private void SpawnWave(int count)
-    {
-        for(int i=0;i<count;i++)
-        {
-            Vector2 position=new(1500,800);
-            for(int attempt=0;attempt<100;attempt++)
-            { position=new Vector2(_rng.RandfRange(Room.Bounds.Position.X+65,Room.Bounds.End.X-65),_rng.RandfRange(Room.Bounds.Position.Y+65,Room.Bounds.End.Y-65)); if(Room.IsFree(position)&&position.DistanceTo(Player.Position)>320) break; }
-            if(!Room.IsFree(position)||position.DistanceTo(Player.Position)<220) continue;
-            var types=Dungeon.Definition.Enemies;
-            Spawn(types.Count>0?types[i%types.Count]:EnemyKind.Shade,position);
-        }
     }
     public override void _Process(double delta)
     {
@@ -209,20 +206,8 @@ public partial class RunManager : Node
                 foreach(var enemy in Enemies.ToArray()) if(!enemy.Dead&&enemy.Position.DistanceTo(fire.Position)<42) enemy.TakeDamage(new DamageInfo(4*Player.Flame.LastEmberDamageMultiplier,fire.Position,0,true));
             }
         }
-        if(!_stageResolved && CurrentStage!=StageKind.Altar && Enemies.Count==0)
-        {
-            if(_wavesRemaining>0)
-            {
-                _waveDelay-=dt;
-                if(_waveDelay<=0) { _wavesRemaining--;_waveDelay=2;SpawnWave(4+StageIndex);Hud.Toast("MORE SHADOWS GATHER"); }
-            }
-            else
-            {
-                _clearDelay-=dt;
-                if(_clearDelay<=0) CompleteRoom();
-            }
-        }
-        if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<44) AdvanceStage();
+        if(!_stageResolved && CurrentStage is not (StageKind.Altar or StageKind.Boss) && Encounter?.Tick(dt)==true)CompleteRoom();
+        if(Room.Cleared && Player.Position.DistanceTo(Room.ExitPosition)<44 && Room.HasLineOfSight(Player.Position,Room.ExitPosition)) AdvanceStage();
     }
     public bool IsLit(Vector2 position)
     {
@@ -272,9 +257,21 @@ public partial class RunManager : Node
     public void AdvanceStage()
     {
         if(!Playing||!Room.Cleared)return;
-        StageIndex++;
-        if(StageIndex>=Route.Length){EndRun(true);return;}
+        var exits=CurrentRoomPlan!.Exits;
+        if(exits.Count==0){EndRun(true);return;}
+        StageIndex=exits[0];
         LoadStage();
+    }
+    public void BeginRiskChallenge()
+    {
+        _stageResolved=false;_roomRewardTaken=false;Room.Cleared=false;Room.QueueRedraw();
+    }
+    private void GenerateDungeon()
+    {
+        // Stable per-biome stream; kills, loot and time cannot alter future rooms.
+        Graph=new DungeonGenerator().Generate(unchecked(Seed+(ulong)DungeonIndex*0x9E3779B97F4A7C15UL),Dungeons,DungeonIndex);
+        GD.Print($"DUNGEON seed={Seed} biome={Graph.Definition.DisplayName} rooms={Graph.Rooms.Count}");
+        foreach(var room in Graph.Rooms)GD.Print($"  {room.Id}: {room.Type} / {room.Geometry.Id} / {room.Encounter.Id} / props {room.PropVariant}");
     }
     public void OpenRewards()
     {
@@ -323,6 +320,7 @@ public partial class RunManager : Node
     {
         if(!Playing || index<0 || index>=Dungeons.Count)return;
         Player.ResetForRoom();DungeonIndex=index;Dungeon.Enter(Dungeons[index]);_ambient.Color=Dungeon.Definition.Ambient;
+        GenerateDungeon();
         StageIndex=0;LoadStage();
     }
     public void SetDevEnabled(bool enabled)

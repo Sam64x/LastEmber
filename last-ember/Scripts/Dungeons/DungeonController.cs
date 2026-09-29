@@ -15,9 +15,7 @@ public partial class DungeonController : Node
     }
     public void Populate(Room room)
     {
-        room.Modulate=Definition.FloorTint;
-        if(Definition.Environment!=null && Run.CurrentStage is not (StageKind.Altar or StageKind.Reward))room.AddChild(Definition.Environment.Instantiate());
-        Run.Hud.Toast(Definition.DisplayName.ToUpperInvariant()+" • "+Definition.Lesson);
+        if(Run.Graph!=null)Run.Graph.Biome.Apply(room,Run.CurrentRoomPlan!);
     }
     public bool IsSlippery(Vector2 position)
     {

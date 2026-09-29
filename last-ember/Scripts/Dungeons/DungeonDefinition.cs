@@ -13,6 +13,7 @@ public partial class DungeonDefinition : Resource
     [Export] public AudioStream? AmbientSound { get; set; }
     [Export] public Godot.Collections.Array<EnemyKind> Enemies { get; set; } = new();
     [Export] public Godot.Collections.Array<PackedScene> Rooms { get; set; } = new();
+    [Export] public Godot.Collections.Array<RoomDefinition> Geometries { get; set; } = new();
     [Export] public PackedScene? Environment { get; set; }
     [Export] public PackedScene? Boss { get; set; }
     [Export] public string BossName { get; set; } = "The Extinguisher";

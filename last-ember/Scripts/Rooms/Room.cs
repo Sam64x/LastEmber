@@ -9,9 +9,11 @@ public partial class Room : Node2D
     public RunManager Run { get; set; } = null!;
     [Export] public bool LayoutGeometry { get; set; } = true;
     public int Layout { get; set; }
+    public RoomDefinition? Definition { get; set; }
+    public ulong GeometrySeed { get; set; }
     public bool BossArena { get; set; }
     public bool Cleared { get; set; }
-    public Rect2 Bounds => BossArena ? Interior : new Rect2(360,296,1200,520);
+    public Rect2 Bounds => Definition?.Bounds ?? (BossArena ? Interior : new Rect2(360,296,1200,520));
     public Vector2 EntrancePosition => new(Bounds.Position.X+90,Bounds.GetCenter().Y);
     public Vector2 ExitPosition => new(Bounds.End.X-24,Bounds.GetCenter().Y);
     public Vector2 ShrinePosition => new(Bounds.End.X-130,Bounds.GetCenter().Y);
@@ -39,16 +41,18 @@ public partial class Room : Node2D
     public override void _Ready()
     {
         ZIndex = -10;
-        _rng.Seed = (ulong)(Layout + 991);
+        _rng.Seed = Definition!=null?GeometrySeed:(ulong)(Layout + 991);
         for (int i = 0; i < 180; i++) _chips.Add(new Vector2(_rng.RandfRange(Bounds.Position.X+10,Bounds.End.X-10),_rng.RandfRange(Bounds.Position.Y+10,Bounds.End.Y-10)));
         AddWall(R(Bounds.Position.X-26,Bounds.Position.Y-26,Bounds.Size.X+52,26));
         AddWall(R(Bounds.Position.X-26,Bounds.End.Y,Bounds.Size.X+52,26));
         AddWall(R(Bounds.Position.X-26,Bounds.Position.Y,26,Bounds.Size.Y));
         AddWall(R(Bounds.End.X,Bounds.Position.Y,26,Bounds.Size.Y));
-        if (LayoutGeometry && !BossArena && Run.StageIndex>0 && Run.CurrentStage is not (StageKind.Altar or StageKind.Reward)) foreach (var rect in LayoutObstacles(Layout))
+        if(Definition!=null && !BossArena)
+            foreach(var rect in Definition.Solids){Obstacles.Add(rect);AddWall(rect);}
+        else if (LayoutGeometry && !BossArena && Run.StageIndex>0 && Run.CurrentStage is not (StageKind.Altar or StageKind.Reward)) foreach (var rect in LayoutObstacles(Layout))
         { var compact=new Rect2(MapPoint(rect.Position),rect.Size*Bounds.Size/Interior.Size);Obstacles.Add(compact);AddWall(compact); }
         AddChild(new WallMemory {Room=this,ZIndex=1});
-        if(!BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat && Run.Dungeon.Definition.AshTraps)
+        if(Definition==null && !BossArena && Run.StageIndex>=3 && Run.CurrentStage==StageKind.Combat && Run.Dungeon.Definition.AshTraps)
         {
             foreach(var point in new[]{MapPoint(new Vector2(780,330)),MapPoint(new Vector2(1160,780))})
                 if(IsFree(point,35))AddChild(new AshTrap {Run=Run,Position=point,ZIndex=12});
@@ -107,6 +111,24 @@ public partial class Room : Node2D
         if (!Bounds.Grow(-margin).HasPoint(position)) return false;
         foreach (var obstacle in Obstacles) if (obstacle.Grow(margin).HasPoint(position)) return false;
         return true;
+    }
+    public IEnumerable<Vector2> FreePositions(float margin)
+    {
+        for(float y=Bounds.Position.Y+margin;y<Bounds.End.Y-margin;y+=24)
+            for(float x=Bounds.Position.X+margin;x<Bounds.End.X-margin;x+=24)
+                if(IsFree(new Vector2(x,y),margin))yield return new Vector2(x,y);
+    }
+    public Vector2 FindFreePosition(Vector2 normalized, float margin=48)
+    {
+        var target=Bounds.Position+normalized*Bounds.Size;
+        if(IsFree(target,margin))return target;
+        Vector2? best=null;float distance=float.MaxValue;
+        foreach(var p in FreePositions(margin))
+        {
+            float d=p.DistanceSquaredTo(target);
+            if(d<distance){best=p;distance=d;}
+        }
+        return best??throw new System.InvalidOperationException($"No free socket in {Definition?.Id}");
     }
     public bool HasLineOfSight(Vector2 a, Vector2 b)
     {
@@ -188,7 +210,7 @@ public partial class Room : Node2D
         DrawRect(gate,new Color(.12f,.09f,.10f));
         for(int i=0;i<5;i++) DrawLine(new Vector2(gate.Position.X+5+i*6,gate.Position.Y+2),new Vector2(gate.Position.X+5+i*6,gate.End.Y-2),Cleared?new Color(1,.58f,.2f):new Color(.36f,.25f,.24f),3);
         if (Cleared) { DrawArc(ExitPosition-new Vector2(18,0),37,-1.2f,1.2f,24,new Color(1,.62f,.25f),3,true); }
-        if(Run.ShrineAvailable)
+        if(Run.ShrineAvailable || Run.CurrentRoomPlan?.Type==RoomType.RiskReward)
         {
             var p=ShrinePosition;
             DrawRect(new Rect2(p-new Vector2(28,15),new Vector2(56,38)),new Color(.35f,.26f,.2f));

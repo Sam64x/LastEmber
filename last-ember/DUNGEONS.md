@@ -1,3 +1,5 @@
+> Текущая генерация описана в [LEVEL_SYSTEM.md](LEVEL_SYSTEM.md): девять этапов, RoomDefinition и отдельные encounters. Ниже сохранена документация Attunement; описание старого маршрута из 10 комнат и автоматического размещения Environment-сцен больше не относится к live-генерации.
+
 # Last Ember — Attunement
 
 ## Запуск

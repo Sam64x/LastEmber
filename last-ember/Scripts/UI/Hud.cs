@@ -43,7 +43,7 @@ public partial class Hud : CanvasLayer
         _flame.Modulate=blue?new Color(.3f,.75f,1):player.Flame.Ratio<.3f?new Color(1,.43f,.29f):Colors.White;
         if(_flameBar.GetThemeStylebox("fill") is StyleBoxFlat flameStyle)flameStyle.BgColor=blue?new Color(.25f,.7f,1):Amber;
         _flameBar.Value=player.Flame.Ratio*100;
-        _room.Text=$"{Run.StageIndex+1:00} / 10   ·   {Run.CurrentStage.ToString().ToUpperInvariant()}\n{Run.Kills} FALLEN     {TimeText(Run.RunTime)}";
+        _room.Text=$"{Run.StageIndex+1:00} / {Run.RoomCount:00}   ·   {(Run.CurrentRoomPlan?.DisplayType??Run.CurrentStage.ToString().ToUpperInvariant())}\n{Run.Kills} FALLEN     {TimeText(Run.RunTime)}";
         _dash.Text=player.DashCooldown<=0?"SPACE   DASH READY":$"SPACE   {player.DashCooldown:0.0}s";
         _dashBar.Value=(1-player.DashCooldown)*100;
         _reveal.Text=$"Q   {player.AbilityName.ToUpperInvariant()}  "+(blue?"FREE":$"-{player.RevealCost:0}")+"\n"+(player.RevealCooldown<=0?Run.Dungeon.Definition.DisplayName:$"RECHARGING {player.RevealCooldown:0.0}s");
@@ -61,7 +61,7 @@ public partial class Hud : CanvasLayer
         if(Run.Playing){_toastTime-=(float)delta;_toast.Visible=_toastTime>0;}
         bool nearShrine=Run.ShrineAvailable&&player.Position.DistanceTo(Run.Room.ShrinePosition)<90;
         bool nearAltar=Run.CurrentStage==StageKind.Altar&&player.Position.DistanceTo(Run.Room.Bounds.GetCenter())<110;
-        _prompt.Text=nearShrine?"E • EMBER SHRINE • RESTORE OR ARTIFACT":Run.Room.Cleared?"EASTERN GATE OPEN   →":nearAltar?"E • ALTAR OF SACRIFICE":"";
+        _prompt.Text=Run.CurrentRoomPlan?.Type==RoomType.Ability && !Run.Room.Cleared && !Run.ShrineAvailable ? Run.Encounter!.Objective : Run.Encounter?.RiskAvailable==true ? Run.Encounter!.Objective : nearShrine?"E • EMBER SHRINE • RESTORE OR ARTIFACT":Run.Room.Cleared?"EASTERN GATE OPEN   →":nearAltar?"E • ALTAR OF SACRIFICE":"";
     }
     public static string TimeText(float seconds)=>$"{(int)seconds/60:00}:{(int)seconds%60:00}";
     public void Toast(string text){_toast.Text=text;_toastTime=3.5f;_toast.Visible=true;}

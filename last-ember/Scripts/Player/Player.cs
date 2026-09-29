@@ -132,7 +132,12 @@ public partial class Player : CharacterBody2D, IDamageable
         return true;
     }
     public void SuppressUiClick(){_waitForMouseRelease=true;Melee.CancelCharge();}
-    public bool TryDungeonAbility() => Attunement?.Activate() ?? false;
+    public bool TryDungeonAbility()
+    {
+        bool activated=Attunement?.Activate()??false;
+        if(activated)Run.Encounter?.AbilityUsed();
+        return activated;
+    }
     public bool TryReveal() => TryDungeonAbility(); // Compatibility for existing development tools.
     public void ResetForRoom()
     {

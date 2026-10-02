@@ -106,7 +106,6 @@ public partial class Player : CharacterBody2D, IDamageable
             if (_trailClock <= 0)
             {
                 _trailClock = .025f;
-                Run.Fx.Ghost(Position,Flame.LastEmber);
                 if (Build.Has(ArtifactEffect.DashTrail)) Run.AddFire(Position);
             }
         }
@@ -133,6 +132,7 @@ public partial class Player : CharacterBody2D, IDamageable
         Melee.OnDash();
         DashCooldown = 1; _dashTime = DashDuration; _invulnerable = .2f;
         _dashDirection = direction.LengthSquared() > .01f ? direction.Normalized() : Aim;
+        _visual.Dash(_dashDirection);
         Cores.OnDash();
         Run.BreakTethers();
         if (Build.DashExplosion) Run.Explode(Position, 115, Build.DashExplosionDamage, false);
@@ -143,7 +143,7 @@ public partial class Player : CharacterBody2D, IDamageable
     public bool TryDungeonAbility()
     {
         bool activated=Attunement?.Activate()??false;
-        if(activated)Run.Encounter?.AbilityUsed();
+        if(activated){_visual.Cast(Attunement!.Blue);Run.Encounter?.AbilityUsed();}
         return activated;
     }
     public bool TryReveal() => TryDungeonAbility(); // Compatibility for existing development tools.
@@ -227,7 +227,7 @@ public partial class Player : CharacterBody2D, IDamageable
         _knockback = Melee.StableCharge?Vector2.Zero:(Position - hit.Origin).Normalized() * hit.Knockback;
         Melee.OnDamaged();
         Flame.Damage(hit.Amount);
-        _visual.Hurt();
+        _visual.Hurt((Position-hit.Origin).Normalized());
         Run.Fx.Sparks(Position, FlamePalette.Fire(Flame.LastEmber), 14);
         Run.Fx.Text(Position - new Vector2(0, 28), $"−{hit.Amount:0}", new Color(1, .4f, .25f));
         Run.Shake(lastChance?3:hit.Amount >= 12 ? 9 : 4);

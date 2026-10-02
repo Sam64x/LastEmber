@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 project = Path(__file__).resolve().parents[1]
-atlas = Image.open(project / 'Assets/Characters/ember-spirit-atlas.png').convert('RGBA')
+atlas = Image.open(project / 'Assets/Characters/ember-mask-atlas-v2.png').convert('RGBA')
 assert atlas.size == (1536, 1024), 'Unexpected atlas grid'
 assert atlas.getchannel('A').getextrema()[0] == 0, 'Atlas needs transparency'
 preview = Image.new('RGBA', (1200, 480), '#11151c')
@@ -19,9 +19,9 @@ for frame, label in enumerate(labels):
     left = 24 + frame * 194
     draw.text((left, 65), label, font=font, fill='#97a2b0')
     preview.alpha_composite(sprite.resize((184, 184), Image.Resampling.LANCZOS), (left, 100))
-    preview.alpha_composite(sprite.resize((76, 76), Image.Resampling.LANCZOS), (left + 54, 330))
-draw.text((28, 440), 'BOTTOM ROW: 76px production cell size. Offline asset preview; not a gameplay capture.', font=font, fill='#97a2b0')
-output = project.parent / 'art/ember-spirit-preview.png'
+    preview.alpha_composite(sprite.resize((64, 64), Image.Resampling.LANCZOS), (left + 60, 330))
+draw.text((28, 440), 'BOTTOM ROW: 64px production cell size. Offline asset preview; not a gameplay capture.', font=font, fill='#97a2b0')
+output = project.parent / 'art/ember-mask-preview-v2.png'
 output.parent.mkdir(parents=True, exist_ok=True)
 preview.convert('RGB').save(output)
 print(output)

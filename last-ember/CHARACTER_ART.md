@@ -1,5 +1,8 @@
 # Ember spirit: character art and presentation
 
+This is the archived first character revision. The current design removes the
+cloak and body entirely; see `MASK_CHARACTER_ART.md` for the active asset and rig.
+
 ## Reference analysis
 
 The first user-provided board establishes animation states and readability at a

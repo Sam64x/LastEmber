@@ -6,6 +6,8 @@ public partial class PlayerVisual : Node2D
 {
     public Player Player {get;set;}=null!;
     private static Texture2D? _atlas;
+    private LivingFlame _flame=null!;
+    private Sprite2D _warmMask=null!,_coldMask=null!;
     private readonly Vector2[] _trail=new Vector2[7];
     private readonly float[] _trailLife=new float[7];
     private readonly int[] _trailFrame=new int[7];
@@ -28,6 +30,12 @@ public partial class PlayerVisual : Node2D
         Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
         TextureFilter=TextureFilterEnum.Linear;
         _=Atlas;
+        _flame=new LivingFlame {ZIndex=1};AddChild(_flame);
+        var maskMaterial=new ShaderMaterial {Shader=ResourceLoader.Load<Shader>("res://Assets/Shaders/ember_mask.gdshader")};
+        _warmMask=new Sprite2D {Texture=Atlas,Hframes=3,Vframes=2,Offset=new Vector2(0,-Atlas.GetHeight()/2f*.1f),Material=maskMaterial,ZIndex=2};
+        _coldMask=new Sprite2D {Texture=Atlas,Hframes=3,Vframes=2,Offset=_warmMask.Offset,Material=maskMaterial,ZIndex=2,Visible=false};
+        AddChild(_warmMask);AddChild(_coldMask);
+        SyncBody();
     }
     public void Hurt(Vector2 direction){_hurt=.26f;_hurtDirection=direction;}
     public void Dash(Vector2 direction){_dashVector=direction.Normalized();_dashAge=0;}
@@ -37,7 +45,36 @@ public partial class PlayerVisual : Node2D
     {
         System.Array.Clear(_trailLife);_lean=Vector2.Zero;_trailClock=0;
         _dashAge=_castAge=1;_hurt=0;
-        QueueRedraw();
+        SyncBody();QueueRedraw();
+    }
+    private (Vector2 Offset,float Rotation,Vector2 Scale,float Dying) BodyPose()
+    {
+        float dying=_death<0?0:Mathf.Clamp(_death/1.2f,0,1);
+        float moving=Mathf.Clamp(Player.Velocity.Length()/220,0,1);
+        float bob=Mathf.Sin(_gait*2)*1.1f*moving+Mathf.Sin(_time*3)*1.3f;
+        var scale=Player.VisualBodyScale*new Vector2(1+.018f*Mathf.Sin(_time*5),1+.022f*Mathf.Sin(_time*4));
+        scale*=new Vector2(1-dying*.5f,1-dying*.5f);
+        float stretch=Player.Dashing?.22f:Mathf.Exp(-Mathf.Max(0,_dashAge-Player.DashDuration)*22)*.12f;
+        if(_dashAge>=.5f)stretch=0;
+        scale*=new Vector2(1+stretch*(Mathf.Abs(_dashVector.X)*2-1),1+stretch*(Mathf.Abs(_dashVector.Y)*2-1));
+        float gather=_castAge<.15f?Mathf.Sin(_castAge/.15f*Mathf.Pi)*.12f:0;
+        scale*=new Vector2(1-gather,1+gather);
+        var offset=Player.VisualBodyOffset+new Vector2(_lean.X*2,-bob+dying*5)+_hurtDirection*Mathf.Sin(_hurt/.26f*Mathf.Pi)*3;
+        return (offset,Player.VisualBodyRotation+_lean.X*.11f,scale,dying);
+    }
+    private void SyncBody()
+    {
+        var pose=BodyPose();
+        _flame.Position=pose.Offset;_flame.Rotation=pose.Rotation;_flame.Scale=pose.Scale;
+        _flame.Update(_time,_blue,1-pose.Dying,_lean,Player.Dashing?1:0);
+        float pixelScale=64f/(Atlas.GetWidth()/3f);
+        _warmMask.Position=_coldMask.Position=pose.Offset;
+        _warmMask.Rotation=_coldMask.Rotation=pose.Rotation;
+        _warmMask.Scale=_coldMask.Scale=pose.Scale*pixelScale;
+        _warmMask.FlipH=_coldMask.FlipH=_flip;
+        var tint=_hurt>0?new Color(1.35f,1.2f,1.1f,1-pose.Dying):new Color(1,1,1,1-pose.Dying);
+        _warmMask.Frame=_direction;_warmMask.Visible=_blue<1;_warmMask.Modulate=tint;
+        _coldMask.Frame=_direction+3;_coldMask.Visible=_blue>0;_coldMask.Modulate=new Color(tint,tint.A*_blue);
     }
     public override void _Process(double delta)
     {
@@ -63,7 +100,7 @@ public partial class PlayerVisual : Node2D
             _trailFrame[_slot]=_direction+(Player.Flame.LastEmber?3:0);
             _trailFlip[_slot]=_flip;
         }
-        QueueRedraw();
+        SyncBody();QueueRedraw();
     }
     private Rect2 Source(int frame)
     {
@@ -110,25 +147,13 @@ public partial class PlayerVisual : Node2D
         for(int i=0;i<_trail.Length;i++)
             if(_trailLife[i]>0)Sprite(ToLocal(_trail[i]),_trailFrame[i],new Color(1,1,1,.26f*_trailLife[i]/.2f),Vector2.One,_trailFlip[i]);
         float dying=_death<0?0:Mathf.Clamp(_death/1.2f,0,1);
-        float moving=Mathf.Clamp(Player.Velocity.Length()/220,0,1);
-        float bob=Mathf.Sin(_gait*2)*1.1f*moving+Mathf.Sin(_time*3)*1.3f;
         DrawSetTransform(new Vector2(0,7),0,new Vector2(1,.4f));
         DrawCircle(Vector2.Zero,18,new Color(0,0,0,.52f*(1-dying)));
         for(int i=3;i>=1;i--)DrawCircle(Vector2.Zero,10+i*4,new Color(fire,.025f*(1-dying)));
         DrawSetTransform(Vector2.Zero,0,Vector2.One);
         DrawCast();
-        var bodyScale=Player.VisualBodyScale*new Vector2(1+.018f*Mathf.Sin(_time*5),1+.022f*Mathf.Sin(_time*4));
-        bodyScale*=new Vector2(1-dying*.5f,1-dying*.5f);
-        float dashStretch=Player.Dashing?.22f:Mathf.Exp(-Mathf.Max(0,_dashAge-Player.DashDuration)*22)*.12f;
-        if(_dashAge>=.5f)dashStretch=0;
-        bodyScale*=new Vector2(1+dashStretch*(Mathf.Abs(_dashVector.X)*2-1),1+dashStretch*(Mathf.Abs(_dashVector.Y)*2-1));
-        float gather=_castAge<.15f?Mathf.Sin(_castAge/.15f*Mathf.Pi)*.12f:0;
-        bodyScale*=new Vector2(1-gather,1+gather);
-        var offset=Player.VisualBodyOffset+new Vector2(_lean.X*2,-bob+dying*5)+_hurtDirection*Mathf.Sin(_hurt/.26f*Mathf.Pi)*3;
-        DrawSetTransform(offset,Player.VisualBodyRotation+_lean.X*.11f,bodyScale);
-        var tint=_hurt>0?new Color(1.35f,1.2f,1.1f,1-dying):new Color(1,1,1,1-dying);
-        if(_blue<1)Sprite(Vector2.Zero,_direction,tint,Vector2.One);
-        if(_blue>0)Sprite(Vector2.Zero,_direction+3,new Color(tint,tint.A*_blue),Vector2.One);
+        var pose=BodyPose();
+        DrawSetTransform(pose.Offset,pose.Rotation,pose.Scale);
         // Detached sparks provide living motion without changing sprite silhouettes.
         for(int i=0;i<9;i++)
         {

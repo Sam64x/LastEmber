@@ -1,5 +1,9 @@
 # Ember mask — active character design
 
+Fire rendering was subsequently replaced with the continuously animated GPU
+layer described in `CONTINUOUS_FIRE.md`. The atlas now supplies the mask/eyes;
+its painted fire is suppressed on the main character by a material.
+
 The revised user references describe a compact floating obsidian mask with
 almond-shaped emissive eyes. Fire ribbons form its entire silhouette. There is
 no torso, cloak, scarf, hand or foot. Broad faceted shapes and clean flame edges

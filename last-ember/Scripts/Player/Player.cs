@@ -30,7 +30,7 @@ public partial class Player : CharacterBody2D, IDamageable
     public float BurstCooldown { get; private set; }
     public float RevealCooldown => Attunement?.Remaining ?? 0;
     public bool BluePulseActive => Revealing && Attunement!.Blue;
-    private float _coldClock, _blueBlend;
+    private float _coldClock;
     public bool Revealing => Attunement is { Reveals: true, Active: true };
     public Vector2 Aim { get; set; } = Vector2.Right;
     public Vector2 TestMovement { get; set; }
@@ -41,6 +41,10 @@ public partial class Player : CharacterBody2D, IDamageable
     private Vector2 _strikeAim;
     private FireStrikeFx _strikeFx=null!;
     private EmberLight _strikeLight=null!;
+    private PlayerVisual _visual=null!;
+    public Vector2 VisualBodyOffset=>_strikeFx.BodyOffset;
+    public float VisualBodyRotation=>_strikeFx.BodyRotation;
+    public Vector2 VisualBodyScale=>_strikeFx.BodyScale;
     private Vector2 _dashDirection, _knockback;
 
     private float _lastFlame=100, _stepClock;
@@ -55,7 +59,8 @@ public partial class Player : CharacterBody2D, IDamageable
         AddChild(_strikeLight);
         var listener = new AudioListener2D(); AddChild(listener); listener.MakeCurrent();
         RevealLight=new EmberLight {Name="RevealLight",Lit=false,Tint=new Color(1,.85f,.63f),Intensity=.95f};AddChild(RevealLight);
-        Flame.Emptied += () => Run.EndRun(false);
+        _visual=new PlayerVisual {Player=this};AddChild(_visual);
+        Flame.Emptied += () => {_visual.Die();Run.EndRun(false);};
         Flame.Changed+=OnFlameChanged;
         Flame.LastEmberChanged+=OnLastEmberChanged;
         Flame.DeathPrevented+=()=>_invulnerable=Mathf.Max(_invulnerable,.5f);
@@ -71,7 +76,6 @@ public partial class Player : CharacterBody2D, IDamageable
         BurstCooldown = Mathf.Max(0, BurstCooldown - dt);
 
 
-        _blueBlend=Mathf.Lerp(_blueBlend,Flame.LastEmber?1:0,1-Mathf.Exp(-dt*12));
         Light.Tint=FlamePalette.Light(Flame.LastEmber);
 
         _strikeLight.Tint=FlamePalette.Light(Flame.LastEmber);
@@ -145,6 +149,7 @@ public partial class Player : CharacterBody2D, IDamageable
     public bool TryReveal() => TryDungeonAbility(); // Compatibility for existing development tools.
     public void ResetForRoom()
     {
+        _visual.ResetForRoom();
         Melee.Reset();
         Cores.Reset();
         CancelReveal();
@@ -222,21 +227,10 @@ public partial class Player : CharacterBody2D, IDamageable
         _knockback = Melee.StableCharge?Vector2.Zero:(Position - hit.Origin).Normalized() * hit.Knockback;
         Melee.OnDamaged();
         Flame.Damage(hit.Amount);
+        _visual.Hurt();
         Run.Fx.Sparks(Position, FlamePalette.Fire(Flame.LastEmber), 14);
         Run.Fx.Text(Position - new Vector2(0, 28), $"−{hit.Amount:0}", new Color(1, .4f, .25f));
         Run.Shake(lastChance?3:hit.Amount >= 12 ? 9 : 4);
         if(!lastChance)Run.Audio.Play("hurt");
-    }
-    public override void _Draw()
-    {
-        DrawCircle(new Vector2(0, 13), 21, new Color(0, 0, 0, .65f));
-        DrawSetTransform(_strikeFx.BodyOffset,_strikeFx.BodyRotation,_strikeFx.BodyScale);
-        var white = _invulnerable > .2f && ((int)(_invulnerable * 25) % 2 == 0);
-        var c = white ? Colors.White : new Color(1,.56f,.19f).Lerp(new Color(.15f,.65f,1),_blueBlend);
-        DrawColoredPolygon(new[] { new Vector2(-15, 12), new Vector2(-11, -12), new Vector2(0, -24), new Vector2(12, -10), new Vector2(17, 14), new Vector2(0, 21) }, new Color(.25f, .13f, .1f));
-        DrawColoredPolygon(new[] { new Vector2(-9, 7), new Vector2(-7, -7), new Vector2(-1, -20), new Vector2(4, -8), new Vector2(10, -3), new Vector2(7, 10), new Vector2(0, 14) }, c);
-        DrawCircle(new Vector2(0, 0), 5, new Color(1,.92f,.67f).Lerp(new Color(.8f,.96f,1),_blueBlend));
-        DrawSetTransform(Vector2.Zero,0,Vector2.One);
-        DrawLine(Aim * 18, Aim * 37, new Color(.95f, .87f, .70f), 4, true);
     }
 }

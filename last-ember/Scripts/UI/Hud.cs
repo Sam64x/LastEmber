@@ -34,6 +34,7 @@ public partial class Hud : CanvasLayer
         _hud=new Control {MouseFilter=Control.MouseFilterEnum.Ignore};_hud.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);Root.AddChild(_hud);
         Panel(_hud,new Rect2(0,0,1920,127),new Color(.035f,.037f,.046f,.97f));
         Panel(_hud,new Rect2(0,984,1920,96),new Color(.035f,.037f,.046f,.97f));
+        _hud.AddChild(new EmberPortrait {Run=Run,Position=new Vector2(8,51),Size=new Vector2(48,64)});
         Text(_hud,"L A S T   E M B E R",new Rect2(62,24,450,34),24,Muted);
         _flame=Text(_hud,"",new Rect2(62,64,340,37),29,Cream);
         _flameBar=Bar(_hud,new Rect2(380,72,375,12),Amber);

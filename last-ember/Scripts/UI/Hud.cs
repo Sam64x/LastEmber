@@ -13,6 +13,7 @@ public partial class Hud : CanvasLayer
     private Label _flame=null!,_room=null!,_dash=null!,_reveal=null!,_relics=null!,_toast=null!,_bossName=null!,_prompt=null!;
     private ProgressBar _flameBar=null!,_dashBar=null!,_bossBar=null!;
     private float _toastTime;
+    public bool CollectionOpen { get; private set; }
     public static readonly Color Amber=new(1,.62f,.28f), Cream=new(.94f,.89f,.79f), Muted=new(.57f,.56f,.56f);
     public override void _Ready()
     {
@@ -77,6 +78,7 @@ public partial class Hud : CanvasLayer
     public void Toast(string text){_toast.Text=text;_toastTime=3.5f;_toast.Visible=true;}
     private void ClearModal()
     {
+        CollectionOpen=false;
         if(Modal!=null){Root.RemoveChild(Modal);Modal.QueueFree();Modal=null;}
     }
     public void ShowHud(){ClearModal();_hud.Visible=true;if(GodotObject.IsInstanceValid(Run.Player))Run.Player.SuppressUiClick();}
@@ -95,14 +97,21 @@ public partial class Hud : CanvasLayer
         Text(root,"LAST\nEMBER",new Rect2(134,250,890,335),134,Cream);
         Panel(root,new Rect2(145,623,75,3),Amber);
         Text(root,"The sun is gone. The fire is yours.\nSpend your light. Survive the descent.",new Rect2(145,655,740,95),28,Muted);
-        Button(root,"START RUN     →",new Rect2(145,795,425,80),()=>Run.StartRun(),true,"StartRun");
-        Button(root,"QUIT",new Rect2(590,795,190,80),()=>GetTree().Quit(),false,"Quit");
-        Button(root,"AUDIO",new Rect2(805,795,220,80),ShowAudio,false,"AudioSettings");
+        Button(root,"START RUN     →",new Rect2(145,795,360,80),()=>Run.StartRun(),true,"StartRun");
+        Button(root,"КОЛЛЕКЦИЯ",new Rect2(525,795,280,80),ShowCollection,false,"Collection");
+        Button(root,"AUDIO",new Rect2(825,795,180,80),ShowAudio,false,"AudioSettings");
+        Button(root,"QUIT",new Rect2(1100,915,380,45),()=>GetTree().Quit(),false,"Quit");
         Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  ATTUNEMENT    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
         for(int i=0;i<Run.Dungeons.Count;i++)
         {int selected=i;Button(root,Run.Dungeons[i].DisplayName.ToUpperInvariant(),new Rect2(1100,680+i*75,380,65),()=>Run.StartRun(dungeonIndex:selected),false,"Dungeon"+i);}
         AddDevToggle(root,new Vector2(145,891));
         Text(root,"01   /   THE FALLEN CITY",new Rect2(1370,976,420,38),18,Muted);
+    }
+    public void ShowCollection()
+    {
+        if(Run.State!=RunState.Menu)return;
+        _hud.Visible=false;var root=Overlay();CollectionOpen=true;
+        root.AddChild(new CollectionScreen {Run=Run,Back=ShowMenu});
     }
     public void ShowRewards()
     {

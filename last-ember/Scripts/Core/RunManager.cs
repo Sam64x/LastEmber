@@ -100,6 +100,8 @@ public partial class RunManager : Node
     }
     public override void _UnhandledInput(InputEvent input)
     {
+        if(input.IsActionPressed("pause")&&State==RunState.Menu&&Hud.CollectionOpen)
+        {Hud.ShowMenu();GetViewport().SetInputAsHandled();return;}
         if(input.IsActionPressed("dev_tools") && DevEnabled)
         {DevTools.Toggle();GetViewport().SetInputAsHandled();return;}
         if(input.IsActionPressed("pause") && DevTools.Open)

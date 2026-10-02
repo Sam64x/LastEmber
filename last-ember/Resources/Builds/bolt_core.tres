@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CoreData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/CoreData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 24
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "bolt_core"
+DisplayName = "Bolt Core"
+Description = "Every LMB strike also fires a 620 px ember bolt for 65% of base Strike damage. Combines with other Cores."
+Tags = PackedStringArray("Projectile")
+
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

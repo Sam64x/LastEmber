@@ -27,14 +27,19 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
     private Line2D? _tether;
     private bool _heardReveal;
     private float _stalkTime;
+    private GroundAttackTelegraph? _rangedWarning;
     public bool IceArmored { get; set; }
     public bool FireAligned { get; set; }
     public float Weakened { get; private set; }
-    public void React(DungeonImpact impact,float seconds,Vector2 origin,bool blue)
+    public virtual void React(DungeonImpact impact,float seconds,Vector2 origin,bool blue)
     {
         if(Dead)return;
         if(impact==DungeonImpact.Heat && IceArmored){IceArmored=false;Run.Fx.Sparks(Position,new Color(.65f,.9f,1),15);}
-        if(impact==DungeonImpact.Suction && FireAligned)Weakened=Mathf.Max(Weakened,seconds);
+        if(impact==DungeonImpact.Suction && FireAligned)
+        {
+            Weakened=Mathf.Max(Weakened,seconds);
+            if(Kind==EnemyKind.FireWisp){Telegraph=0;Cooldown=Mathf.Max(Cooldown,1.2f);_rangedWarning?.Clear();}
+        }
         if(impact==DungeonImpact.Blast)TakeDamage(new DamageInfo(FireAligned && Weakened>0?18:10,origin,300));
     }
     public bool FrozenForTest { get; set; }
@@ -57,7 +62,7 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
         if(Heat>=100){Heat=Mathf.Min(99,Heat-100);Burn.Apply();Run.Fx.Text(Position-new Vector2(0,38),"IGNITED",FlamePalette.Fire(Run.Player.Flame.LastEmber));}
         QueueRedraw();
     }
-    public bool WindingUp => Telegraph > 0;
+    public virtual bool WindingUp => Telegraph > 0;
 
     public override void _Ready()
     {
@@ -83,6 +88,11 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
             AddChild(_tether);
         }
         AddChild(new EnemyStatusFx {Enemy=this});
+        if(Kind==EnemyKind.FireWisp)
+        {
+            _rangedWarning=new GroundAttackTelegraph {Tint=new Color(1,.5f,.2f)};
+            AddChild(_rangedWarning);
+        }
         ZIndex = 7;
         _stepClock = Mathf.PosMod(Position.X * .017f + Position.Y * .013f, 1.6f);
     }
@@ -137,9 +147,35 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
             _ => 112
         };
         if(Weakened>0)SpeedNow*=.4f;
-        if(FireAligned && Cooldown<=0 && Weakened<=0){Run.Shoot(Position,player.Position,240,8,true);Cooldown=2;}
+        if(FireAligned && Kind!=EnemyKind.FireWisp && Cooldown<=0 && Weakened<=0){Run.Shoot(Position,player.Position,240,ContactDamage,true);Cooldown=2;}
         Vector2 direction = Active ? offset.Normalized() : Vector2.Zero;
-        if (Kind == EnemyKind.Watcher && Active)
+        if (Kind == EnemyKind.FireWisp)
+        {
+            // Keep a firing lane; close-range melee can pressure a retreating wisp.
+            direction=offset.Normalized()*(distance>300?1:distance<180?-1:0);
+            if(distance>=180&&distance<=300)direction=offset.Normalized().Orthogonal()*.35f;
+            if(Weakened>0){Telegraph=0;_rangedWarning!.Clear();}
+            else if(Telegraph>0)
+            {
+                direction=Vector2.Zero;Telegraph=Mathf.Max(0,Telegraph-dt);
+                _rangedWarning!.ShotOrigin=Position;
+                _rangedWarning.ShotDirections.Clear();_rangedWarning.ShotDirections.Add((Target-Position).Normalized());
+                _rangedWarning.Progress=1-Telegraph/.75f;_rangedWarning.QueueRedraw();
+                if(Telegraph<=0)
+                {
+                    Run.Shoot(Position,Target,240,ContactDamage,true);Run.Audio.PlayAt("watcher_shot",Position,.8f);
+                    Cooldown=2;_rangedWarning.Clear();
+                }
+            }
+            else if(Cooldown<=0 && distance<620 && Run.Room.HasLineOfSight(Position,player.Position))
+            {
+                Target=player.Position;Telegraph=.75f;direction=Vector2.Zero;
+                _rangedWarning!.Clear();_rangedWarning.ShotOrigin=Position;
+                _rangedWarning.ShotDirections.Add((Target-Position).Normalized());_rangedWarning.Show();_rangedWarning.QueueRedraw();
+                Run.Audio.PlayAt("warning",Position,.8f);
+            }
+        }
+        else if (Kind == EnemyKind.Watcher && Active)
         {
             direction = Vector2.Zero;
             if (Telegraph > 0)
@@ -281,6 +317,16 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
         {
             for (int i = 3; i >= 0; i--) DrawCircle(new Vector2(-i * 8, Mathf.Sin(Clock * 8 + i) * 5), 11 - i, color.Darkened(i * .13f));
             DrawCircle(new Vector2(4, -3), 3, new Color(1,.5f,.45f));
+        }
+        else if (Kind == EnemyKind.FireWisp)
+        {
+            DrawCircle(Vector2.Zero,r*.8f,color);
+            for(int i=0;i<3;i++)
+            {
+                var ember=Vector2.FromAngle(Clock*1.5f+i*Mathf.Tau/3)*r;
+                DrawCircle(ember,5,Weakened>0?new Color(.6f,.9f,1):new Color(1,.55f,.15f));
+            }
+            DrawCircle(Vector2.Zero,5,Weakened>0?new Color(.6f,.9f,1):new Color(1,.85f,.45f));
         }
         else
         {

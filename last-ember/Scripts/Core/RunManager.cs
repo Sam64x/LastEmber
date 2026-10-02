@@ -4,7 +4,7 @@ using Godot;
 
 namespace LastEmber;
 
-public enum RunState { Menu, Playing, Reward, Altar, Pause, GameOver, Victory }
+public enum RunState { Menu, Playing, Reward, Altar, Pause, GameOver, Victory, BuildView }
 public enum StageKind { Combat, Reward, Elite, Altar, Boss }
 
 public partial class RunManager : Node
@@ -49,6 +49,7 @@ public partial class RunManager : Node
     private float _shake;
     private float _hitStop;
     private bool _stageResolved, _roomRewardTaken;
+    private RunState _buildReturnState;
     private sealed class FirePatch { public Vector2 Position; public float Life=1.3f, Tick; }
 
     public override void _Ready()
@@ -83,6 +84,7 @@ public partial class RunManager : Node
         KeyAction("left",Key.A);KeyAction("right",Key.D);KeyAction("up",Key.W);KeyAction("down",Key.S);
         KeyAction("dash",Key.Space);KeyAction("pause",Key.Escape);KeyAction("interact",Key.E);
         KeyAction("reveal",Key.Q);KeyAction("dev_tools",Key.F1);
+        KeyAction("build_view",Key.B);
         foreach(var pair in new[] {("melee",MouseButton.Left)})
         { if(!InputMap.HasAction(pair.Item1)) InputMap.AddAction(pair.Item1); InputMap.ActionAddEvent(pair.Item1,new InputEventMouseButton { ButtonIndex=pair.Item2 }); }
     }
@@ -102,7 +104,8 @@ public partial class RunManager : Node
         {DevTools.Toggle();GetViewport().SetInputAsHandled();return;}
         if(input.IsActionPressed("pause") && DevTools.Open)
         {DevTools.Close();GetViewport().SetInputAsHandled();return;}
-        if(input.IsActionPressed("pause")) { TogglePause(); GetViewport().SetInputAsHandled(); }
+        if(input.IsActionPressed("build_view")) { ToggleBuildView(); GetViewport().SetInputAsHandled();return; }
+        if(input.IsActionPressed("pause")) { TogglePause(); GetViewport().SetInputAsHandled();return; }
         if(input.IsActionPressed("interact") && Playing)
         {
             if(Encounter?.TryChallenge()==true)return;
@@ -216,8 +219,8 @@ public partial class RunManager : Node
     }
     public void BreakTethers() {foreach(var enemy in Enemies)enemy.BreakTether();}
     public void AddFire(Vector2 position) { if(_fires.Count<60)_fires.Add(new FirePatch {Position=position}); }
-    public void Shoot(Vector2 origin,Vector2 target,float speed,float damage,bool fire=false)
-        =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage,Fire=fire});
+    public void Shoot(Vector2 origin,Vector2 target,float speed,float damage,bool fire=false,Color? tint=null)
+        =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage,Fire=fire,Tint=tint??new Color(1,.45f,.32f)});
     public void Explode(Vector2 origin,float radius,float damage,bool burn)
     {
         Fx.Ring(origin,radius,FlamePalette.Fire(Player.Flame.LastEmber));Fx.Sparks(origin,FlamePalette.Fire(Player.Flame.LastEmber),24);
@@ -308,8 +311,23 @@ public partial class RunManager : Node
     }
     public void TogglePause()
     {
+        if(State==RunState.BuildView){ToggleBuildView();return;}
         if(State==RunState.Playing){State=RunState.Pause;Player.SuppressUiClick();GetTree().Paused=true;Hud.ShowPause();}
         else if(State==RunState.Pause){State=RunState.Playing;GetTree().Paused=false;Hud.ShowHud();}
+    }
+    public void ToggleBuildView()
+    {
+        if(DevTools.Open)return;
+        if(State==RunState.BuildView)
+        {
+            State=_buildReturnState;GetTree().Paused=State==RunState.Pause;
+            if(State==RunState.Pause)Hud.ShowPause();else Hud.ShowHud();
+        }
+        else if(State is RunState.Playing or RunState.Pause)
+        {
+            _buildReturnState=State;State=RunState.BuildView;Player.SuppressUiClick();
+            GetTree().Paused=true;Hud.ShowBuild();
+        }
     }
     public void EndRun(bool victory)
     {

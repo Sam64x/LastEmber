@@ -7,6 +7,7 @@ public partial class Extinguisher : Enemy
     public int Phase { get; private set; } = 1;
     public int AttackIndex { get; private set; } = -1;
     public float Warning { get; private set; }
+    public override bool WindingUp => Warning > 0;
     private float _recovery = 2.5f, _charge;
     private Vector2 _chargeDirection;
     private float _attackRadius;

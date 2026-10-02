@@ -127,6 +127,7 @@ public partial class MeleeController : Node2D
     {
         if(!Run.Playing||Player.Dead)return;
         Player.ReleaseStrikeVisual();
+        Player.Cores.OnStrike(strike.Aim,strike.Step);
         float power=Mathf.Max(strike.Charge,Player.Flame.Ratio);
         _audio.Strike(strike.Style,MeleeSoundPhase.Swing,power,Player.Flame.LastEmber,strike.Charge);
         int hits=0;bool critical=false;

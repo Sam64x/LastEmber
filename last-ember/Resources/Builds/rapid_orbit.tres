@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 29
+Value = 0.5
+[resource]
+script = ExtResource("1")
+Id = "rapid_orbit"
+DisplayName = "Rapid Orbit"
+Description = "Orbit Core embers rotate 50% faster, covering nearby enemies more frequently."
+Tags = PackedStringArray("Orbit")
+RequiredIds = PackedStringArray("orbit_core")
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

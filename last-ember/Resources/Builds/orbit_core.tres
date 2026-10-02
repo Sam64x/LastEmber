@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CoreData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/CoreData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 27
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "orbit_core"
+DisplayName = "Orbit Core"
+Description = "Two embers circle you at 88 px and deal 40% of base Strike damage on contact. Each ember can hit a target once per 0.65 s."
+Tags = PackedStringArray("Orbit")
+
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 35
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "meteor_step"
+DisplayName = "Meteor Step"
+Description = "Dash + Orbit: starting a Dash doubles orbital rotation speed for 3 s. Combines with Rapid Orbit; repeated Dashes refresh the duration."
+Tags = PackedStringArray("Dash", "Orbit")
+RequiredIds = PackedStringArray("dash_core", "orbit_core")
+Synergy = true
+Rarity = 3
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

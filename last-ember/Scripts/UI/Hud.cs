@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 
 namespace LastEmber;
@@ -28,7 +29,7 @@ public partial class Hud : CanvasLayer
         _dashBar=Bar(_hud,new Rect2(1150,78,182,5),new Color(.72f,.71f,.77f));
         _reveal=Text(_hud,"",new Rect2(1450,33,410,64),20,Cream);
         _relics=Text(_hud,"",new Rect2(62,995,1260,80),17,Muted,true);
-        Text(_hud,"WASD  MOVE     LMB  STRIKE     SPACE  DASH\nQ  ATTUNEMENT     E  USE     ESC  PAUSE",new Rect2(1390,1004,490,56),17,Muted);
+        Text(_hud,"WASD  MOVE     LMB  STRIKE     SPACE  DASH\nQ  ATTUNEMENT    E  USE    B  BUILD    ESC  PAUSE",new Rect2(1370,1004,530,56),17,Muted);
         _toast=Text(_hud,"",new Rect2(350,150,1220,52),27,Cream);_toast.HorizontalAlignment=HorizontalAlignment.Center;
         _bossName=Text(_hud,"",new Rect2(620,861,680,40),24,Cream);_bossName.HorizontalAlignment=HorizontalAlignment.Center;
         _bossBar=Bar(_hud,new Rect2(620,908,680,9),new Color(.82f,.25f,.18f));
@@ -50,18 +51,27 @@ public partial class Hud : CanvasLayer
         _reveal.Modulate=blue?new Color(.35f,.8f,1):Colors.White;
         string relics="";foreach(var artifact in player.Build.Artifacts)relics+=(relics.Length>0?"  /  ":"")+artifact.DisplayName;
         if(relics.Length>110)relics=relics[..107]+"…";
-        string specializations="";
-        foreach(var upgrade in player.Progression.Upgrades)if(upgrade is SubCoreData)specializations+=(specializations.Length>0?" / ":"")+upgrade.DisplayName;
         _relics.Text=$"RELICS  {player.Build.Artifacts.Count:00}"+(player.Build.AltarUsed?"    •    SACRIFICE BOUND":"")+"\n"+(relics.Length==0?"Carry a little light into the dark.":relics);
-        if(player.Melee.HasCore)_relics.Text+=$"\nMELEE {player.Melee.LastStep}/3  •  STREAK {player.Melee.HitStreak}  •  {specializations}  •  {player.Progression.Upgrades.Count} UPGRADES"+(player.Melee.Charging?$"  •  CHARGE {player.Melee.ChargeRatio:P0}":"");
+        string cores="";
+        foreach(var upgrade in player.Progression.Upgrades)if(upgrade is CoreData)cores+=(cores.Length>0?" / ":"")+upgrade.DisplayName.Replace(" Core","").ToUpperInvariant();
+        if(cores.Length>0)_relics.Text+=$"\nCORES {cores}  •  {player.Progression.Upgrades.Count} UPGRADES"+(player.Melee.HasCore?$"  •  MELEE {player.Melee.LastStep}/3  •  STREAK {player.Melee.HitStreak}":"")+(player.Melee.Charging?$"  •  CHARGE {player.Melee.ChargeRatio:P0}":"");
+        if(player.Cores.OrbitSurge>0)_relics.Text+=$"  •  SURGE {player.Cores.OrbitSurge:0.0}s";
+        if(player.Cores.OrbitHaste>0)_relics.Text+=$"  •  HASTE {player.Cores.OrbitHaste:0.0}s";
         if(Run.DevEnabled)_relics.Text+="   •   DEV MODE: F1";
         Enemy? boss=null;foreach(var enemy in Run.Enemies)if(enemy.Kind==EnemyKind.Boss)boss=enemy;
         _bossBar.Visible=boss!=null;_bossName.Visible=boss!=null;
-        if(boss!=null){_bossBar.Value=boss.Health/boss.MaxHealth*100;_bossName.Text=Run.Dungeon.Definition.BossName.ToUpperInvariant();}
+        if(boss!=null)
+        {
+            _bossBar.Value=boss.Health/boss.MaxHealth*100;
+            int phase=boss is ElementalBoss elemental?elemental.Phase:boss is Extinguisher extinguisher?extinguisher.Phase:1;
+            _bossName.Text=Run.Dungeon.Definition.BossName.ToUpperInvariant()+$"   •   PHASE {phase}";
+        }
         if(Run.Playing){_toastTime-=(float)delta;_toast.Visible=_toastTime>0;}
         bool nearShrine=Run.ShrineAvailable&&player.Position.DistanceTo(Run.Room.ShrinePosition)<90;
         bool nearAltar=Run.CurrentStage==StageKind.Altar&&player.Position.DistanceTo(Run.Room.Bounds.GetCenter())<110;
         _prompt.Text=Run.CurrentRoomPlan?.Type==RoomType.Ability && !Run.Room.Cleared && !Run.ShrineAvailable ? Run.Encounter!.Objective : Run.Encounter?.RiskAvailable==true ? Run.Encounter!.Objective : nearShrine?"E • EMBER SHRINE • RESTORE OR ARTIFACT":Run.Room.Cleared?"EASTERN GATE OPEN   →":nearAltar?"E • ALTAR OF SACRIFICE":"";
+        if(boss is ElementalBoss guardian)
+            _prompt.Text=guardian.Weakened>0?"FIRE INTERRUPTED • STRIKE NOW":guardian.Warning>0?$"{guardian.AttackName} • MOVE OUT OF THE MARKED AREA":guardian.Frost&&guardian.IceArmored?"Q • BREAK THE WARDEN'S ARMOR":guardian.WeakPointRemaining>0?"RECOVERING • STRIKE NOW":"";
     }
     public static string TimeText(float seconds)=>$"{(int)seconds/60:00}:{(int)seconds%60:00}";
     public void Toast(string text){_toast.Text=text;_toastTime=3.5f;_toast.Visible=true;}
@@ -140,6 +150,7 @@ public partial class Hud : CanvasLayer
         var root=Overlay();
         AddDevToggle(root,new Vector2(70,290));
         Button(root,"DEV TOOLS  /  F1",new Rect2(70,370,430,65),()=>{Run.SetDevEnabled(true);Run.DevTools.Toggle();},false,"OpenDevTools");
+        Button(root,"YOUR BUILD  /  B",new Rect2(70,455,430,65),Run.ToggleBuildView,false,"ViewBuild");
         Text(root,"TAKE A BREATH",new Rect2(640,250,900,50),22,Amber);
         Text(root,"The ember waits.",new Rect2(632,320,1020,100),65,Cream);
         Button(root,"RESUME",new Rect2(640,508,640,75),Run.TogglePause,true,"Resume");
@@ -147,6 +158,35 @@ public partial class Hud : CanvasLayer
         Button(root,"MAIN MENU",new Rect2(640,702,640,75),Run.ShowMenu,false,"MainMenu");
         AudioSlider(root,"MUSIC",new Vector2(640,825),Run.Music.Volume,Run.Music.SetVolume,"MusicVolume");
         AudioSlider(root,"EFFECTS",new Vector2(640,902),Run.Audio.Volume,Run.Audio.SetVolume,"SfxVolume");
+    }
+    public void ShowBuild()
+    {
+        var root=Overlay();
+        Text(root,"YOUR BUILD   •   GAME PAUSED",new Rect2(180,100,1450,40),22,Amber);
+        Text(root,"The fire you carry.",new Rect2(173,157,1500,90),62,Cream);
+        var player=Run.Player;
+        Text(root,$"{player.Progression.Upgrades.Count} UPGRADES   /   {player.Build.Artifacts.Count} RELICS   /   {player.Flame.Current:0} / {player.Flame.Maximum:0} FLAME",new Rect2(180,268,1500,40),23,Muted);
+        var scroll=new ScrollContainer {Name="BuildScroll",Position=new Vector2(180,340),Size=new Vector2(1560,550),HorizontalScrollMode=ScrollContainer.ScrollMode.Disabled};
+        root.AddChild(scroll);
+        var rows=new VBoxContainer {SizeFlagsHorizontal=Control.SizeFlags.ExpandFill};rows.AddThemeConstantOverride("separation",14);scroll.AddChild(rows);
+        void Row(string category,string name,string description)
+        {
+            var panel=new PanelContainer {SizeFlagsHorizontal=Control.SizeFlags.ExpandFill};
+            panel.AddThemeStyleboxOverride("panel",new StyleBoxFlat {BgColor=new Color(.067f,.063f,.068f),ContentMarginLeft=22,ContentMarginRight=22,ContentMarginTop=16,ContentMarginBottom=16});
+            rows.AddChild(panel);
+            var column=new VBoxContainer {SizeFlagsHorizontal=Control.SizeFlags.ExpandFill};column.AddThemeConstantOverride("separation",8);panel.AddChild(column);
+            var title=new Label {Text=category+"  /  "+name,AutowrapMode=TextServer.AutowrapMode.WordSmart};
+            title.AddThemeFontSizeOverride("font_size",23);title.AddThemeColorOverride("font_color",Amber);column.AddChild(title);
+            var detail=new Label {Text=description,AutowrapMode=TextServer.AutowrapMode.WordSmart,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill};
+            detail.AddThemeFontSizeOverride("font_size",21);detail.AddThemeColorOverride("font_color",Cream);column.AddChild(detail);
+        }
+        foreach(var upgrade in player.Progression.Upgrades.OrderBy(item=>item is CoreData?0:item.Synergy?1:item is SubCoreData?2:3))
+            Row(upgrade.Category,upgrade.DisplayName+(upgrade.MaxRank>1?$"   RANK {player.Progression.Rank(upgrade.Id)}/{upgrade.MaxRank}":""),upgrade.Description);
+        foreach(var artifact in player.Build.Artifacts)Row("ARTIFACT",artifact.DisplayName,artifact.Description);
+        if(player.Build.AltarUsed)Row("ALTAR","Sacrifice bound",$"Attack speed: {player.Build.AttackSpeed:0.00}x. Dash explosion damage: {player.Build.DashExplosionDamage:0}. Maximum Flame: {player.Flame.Maximum:0}.");
+        if(player.Progression.Upgrades.Count==0&&player.Build.Artifacts.Count==0&&!player.Build.AltarUsed)
+            Row("A NEW FLAME","Your build starts at the shrines.","Clear encounters and claim Cores, talents and relics. Cores combine; hybrid talents appear after you acquire both required Cores.");
+        Button(root,"BACK   /   B OR ESC",new Rect2(650,934,620,70),Run.ToggleBuildView,true,"CloseBuild");
     }
     public void ShowAudio()
     {

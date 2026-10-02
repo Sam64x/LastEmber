@@ -8,6 +8,7 @@ public partial class Projectile : Node2D, IDungeonReactive
     public Vector2 Velocity { get; set; }
     public float Damage { get; set; } = 10;
     public bool Fire {get;set;}
+    public Color Tint {get;set;}=new(1,.45f,.32f);
     public void React(DungeonImpact impact,float seconds,Vector2 origin,bool blue)
     {
         if(Fire && impact==DungeonImpact.Suction && !blue){Hide();QueueFree();}
@@ -26,7 +27,7 @@ public partial class Projectile : Node2D, IDungeonReactive
     }
     public override void _Draw()
     {
-        DrawLine(-Velocity.Normalized()*20,Vector2.Zero,new Color(.9f,.2f,.2f,.5f),6,true);
-        DrawCircle(Vector2.Zero,6,new Color(1,.45f,.32f)); DrawCircle(Vector2.Zero,2,Colors.White);
+        DrawLine(-Velocity.Normalized()*20,Vector2.Zero,new Color(Tint,.5f),6,true);
+        DrawCircle(Vector2.Zero,6,Tint); DrawCircle(Vector2.Zero,2,Colors.White);
     }
 }

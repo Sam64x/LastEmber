@@ -20,6 +20,7 @@ public partial class Player : CharacterBody2D, IDamageable
     public BuildStats Build { get; private set; } = new();
     public BuildState Progression { get; } = new();
     public MeleeController Melee { get; private set; } = null!;
+    public CoreCombatController Cores { get; private set; } = null!;
     public EmberLight Light { get; private set; } = null!;
     public EmberLight RevealLight {get;private set;}=null!;
     public RunManager Run { get; set; } = null!;
@@ -59,6 +60,7 @@ public partial class Player : CharacterBody2D, IDamageable
         Flame.LastEmberChanged+=OnLastEmberChanged;
         Flame.DeathPrevented+=()=>_invulnerable=Mathf.Max(_invulnerable,.5f);
         Melee=new MeleeController {Player=this};AddChild(Melee);
+        Cores=new CoreCombatController {Player=this};AddChild(Cores);
         ZIndex = 8;
     }
     public override void _PhysicsProcess(double delta)
@@ -116,6 +118,7 @@ public partial class Player : CharacterBody2D, IDamageable
         if(!Dashing&&Velocity.LengthSquared()>1000&&_stepClock<=0){_stepClock=.42f;Run.Audio.PlayAt("step",Position,.65f);}
         var bounds=Run.Room.Bounds.Grow(-16);
         Position = new Vector2(Mathf.Clamp(Position.X, bounds.Position.X, bounds.End.X), Mathf.Clamp(Position.Y, bounds.Position.Y, bounds.End.Y));
+        Cores.Tick(dt);
         Light.TargetRadius = FlameLight.Radius(Flame.Current,Build.LightMultiplier);
 
         QueueRedraw();
@@ -126,6 +129,7 @@ public partial class Player : CharacterBody2D, IDamageable
         Melee.OnDash();
         DashCooldown = 1; _dashTime = DashDuration; _invulnerable = .2f;
         _dashDirection = direction.LengthSquared() > .01f ? direction.Normalized() : Aim;
+        Cores.OnDash();
         Run.BreakTethers();
         if (Build.DashExplosion) Run.Explode(Position, 115, Build.DashExplosionDamage, false);
         Run.Audio.Play("dash");
@@ -142,6 +146,7 @@ public partial class Player : CharacterBody2D, IDamageable
     public void ResetForRoom()
     {
         Melee.Reset();
+        Cores.Reset();
         CancelReveal();
     }
     public void CancelStrikeVisual()

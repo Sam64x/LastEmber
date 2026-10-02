@@ -146,7 +146,7 @@ public partial class MusicDirector : Node
             if(bossRatio<=.15f&&Run.Playing)HopeSeconds+=dt;
         }
         _duck=Mathf.Lerp(_duck,1,1-Mathf.Exp(-dt*3));
-        _pauseGain=Mathf.Lerp(_pauseGain,Run.State is RunState.Pause or RunState.Reward?.53f:1,1-Mathf.Exp(-dt*2));
+        _pauseGain=Mathf.Lerp(_pauseGain,Run.State is RunState.Pause or RunState.Reward or RunState.BuildView?.53f:1,1-Mathf.Exp(-dt*2));
         bool lastEmber=GodotObject.IsInstanceValid(Run.Player)&&Run.State!=RunState.Menu&&Run.Player.Flame.LastEmber;
         var state=new MusicFrame(desired,SmoothedFlame,Danger,lit,bossRatio,HopeSeconds,Run.CurrentStage==StageKind.Elite,lastEmber);
         MusicMix.Evaluate(state,_targets);

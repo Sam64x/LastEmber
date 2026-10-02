@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 33
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "ember_lance"
+DisplayName = "Ember Lance"
+Description = "Melee + Bolt: bolts released by the third combo strike deal 50% more damage and break ice armor before impact."
+Tags = PackedStringArray("Melee", "Projectile")
+RequiredIds = PackedStringArray("melee_core", "bolt_core")
+Synergy = true
+Rarity = 3
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

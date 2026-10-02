@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://Scripts/Builds/TalentData.cs" id="1"]
+[ext_resource type="Script" path="res://Scripts/Builds/MeleeEffectData.cs" id="2"]
+[sub_resource type="Resource" id="effect0"]
+script = ExtResource("2")
+Kind = 34
+Value = 1
+[resource]
+script = ExtResource("1")
+Id = "stellar_conduit"
+DisplayName = "Stellar Conduit"
+Description = "Bolt + Orbit: a bolt hit empowers all orbiting embers for 4 s, increasing their damage by 50%. Further hits refresh the duration."
+Tags = PackedStringArray("Projectile", "Orbit")
+RequiredIds = PackedStringArray("bolt_core", "orbit_core")
+Synergy = true
+Rarity = 3
+Effects = Array[ExtResource("2")]([SubResource("effect0")])

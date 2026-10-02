@@ -9,7 +9,11 @@ public enum MeleeEffectKind
     DeepCut, Execution, ChainReaction,
     Unstoppable, CrushingBlow, Aftershock, LastSwing,
     Wildfire, Fuel, BlueFire,
-    ComboCrit, CritBurn, HeavyCrit, HeavyBurn, ComboBurn
+    ComboCrit, CritBurn, HeavyCrit, HeavyBurn, ComboBurn,
+    BoltCore, BoltPierce, BoltVolley,
+    OrbitCore, OrbitCount, OrbitSpeed,
+    DashCore, DashImpact, DashTrail,
+    EmberLance, StellarConduit, MeteorStep, CinderCrossfire
 }
 
 [GlobalClass]

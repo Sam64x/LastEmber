@@ -20,11 +20,13 @@ public partial class CoreCombatController : Node2D
     private readonly List<(int Orb, ulong Enemy)> _expired = new();
     private int OrbitCount => 2 + Mathf.Clamp(Mathf.RoundToInt(Build.Value(MeleeEffectKind.OrbitCount)), 0, 4);
     private const float OrbitRadius = 88;
+    private readonly EmberProjectileVisual[] _orbs=new EmberProjectileVisual[6];
     public override void _Ready()
     {
         ZIndex = 25;
         Material = new CanvasItemMaterial { LightMode = CanvasItemMaterial.LightModeEnum.Unshaded };
         Build.Changed += Reset;
+        for(int i=0;i<_orbs.Length;i++){_orbs[i]=new EmberProjectileVisual {Visible=false};AddChild(_orbs[i]);}
     }
     public override void _ExitTree() => Build.Changed -= Reset;
     public void OnStrike(Vector2 aim,int step)
@@ -121,7 +123,7 @@ public partial class CoreCombatController : Node2D
         if (finished)
         {
             _dashActive = false; _dashHit.Clear();
-            Run.Fx.Ring(current, radius, FlamePalette.Fire(Player.Flame.LastEmber));
+            Run.Fx.Splash(current,radius,Player.Flame.LastEmber);
             Run.Audio.Play("burst"); Run.Shake(3);
             if(Build.Has(MeleeEffectKind.CinderCrossfire))
                 for(int i=0;i<8;i++)FireBolt(Vector2.FromAngle(i*Mathf.Tau/8),.65f);
@@ -135,17 +137,16 @@ public partial class CoreCombatController : Node2D
             foreach (var child in Run.Room.GetChildren()) if (child is CoreBolt bolt) { bolt.Hide(); bolt.QueueFree(); }
         QueueRedraw();
     }
-    public override void _Draw()
+    public override void _Process(double delta)
     {
-        if (Player.Dead || !Build.Has(MeleeEffectKind.OrbitCore)) return;
-        var color = FlamePalette.Fire(Player.Flame.LastEmber);
-        for (int i = 0; i < OrbitCount; i++)
+        bool visible=!Player.Dead&&Build.Has(MeleeEffectKind.OrbitCore);
+        for(int i=0;i<_orbs.Length;i++)
         {
-            float angle = _angle + i * Mathf.Tau / OrbitCount;
-            var point = Vector2.FromAngle(angle) * OrbitRadius;
-            DrawArc(Vector2.Zero, OrbitRadius, angle - .3f, angle, 12, new Color(color, .4f), 4, true);
-            DrawCircle(point, OrbitSurge>0?12:9, color); DrawCircle(point, 3, Colors.White);
-            if(OrbitHaste>0)DrawArc(point,14,0,Mathf.Tau,16,new Color(color,.65f),2,true);
+            var orb=_orbs[i];orb.Visible=visible&&i<OrbitCount;if(!orb.Visible)continue;
+            float angle=_angle+i*Mathf.Tau/OrbitCount;
+            orb.Position=Vector2.FromAngle(angle)*OrbitRadius;
+            orb.Configure(Vector2.FromAngle(angle+Mathf.Pi/2),Player.Flame.LastEmber,OrbitSurge>0);
+            orb.Scale*=OrbitSurge>0?.7f:.55f;
         }
     }
 }

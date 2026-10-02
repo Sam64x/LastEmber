@@ -17,6 +17,8 @@ public partial class Effects : Node2D
     private readonly RandomNumberGenerator _rng = new();
     private readonly CriticalLightningFx[] _criticalPool=new CriticalLightningFx[8];
     private readonly FireImpactFx[] _impactPool=new FireImpactFx[24];
+    private readonly EmberSplashFx[] _splashPool=new EmberSplashFx[12];
+    private int _splashCursor;
     private int _impactCursor;
     private ulong _impactSeed;
     private ulong _criticalSeed;
@@ -25,6 +27,17 @@ public partial class Effects : Node2D
         ZIndex=25;_rng.Randomize();
         for(int i=0;i<_criticalPool.Length;i++){_criticalPool[i]=new CriticalLightningFx();AddChild(_criticalPool[i]);}
         for(int i=0;i<_impactPool.Length;i++){_impactPool[i]=new FireImpactFx();AddChild(_impactPool[i]);}
+        for(int i=0;i<_splashPool.Length;i++){_splashPool[i]=new EmberSplashFx();AddChild(_splashPool[i]);}
+    }
+    public void Splash(Vector2 position,float radius,bool blue=false)
+    {
+        for(int i=0;i<_splashPool.Length;i++)
+        {
+            int index=(_splashCursor+i)%_splashPool.Length;
+            if(_splashPool[index].Active)continue;_splashCursor=index;break;
+        }
+        _splashPool[_splashCursor].Begin(position,radius,blue);
+        _splashCursor=(_splashCursor+1)%_splashPool.Length;
     }
     public void CriticalImpact(Vector2 position,Vector2 direction,float intensity,bool blue)
     {
@@ -42,6 +55,7 @@ public partial class Effects : Node2D
         {
             if(child is CriticalLightningFx critical)critical.Cancel();
             else if(child is FireImpactFx impact)impact.Cancel();
+            else if(child is EmberSplashFx splash)splash.Cancel();
             else {if(child is CanvasItem canvas)canvas.Hide();child.QueueFree();}
         }
         QueueRedraw();

@@ -15,7 +15,7 @@ strike timeline. Body follow-through now includes a short return overshoot.
 Three overlapping ribbon nodes are reused. Stroke palettes snapshot at ignition.
 See `SLASH_REFERENCE_V2.md` for the atlas, generation prompt and updated previews.
 
-`FireImpactFx` uses a noisy radial fire bloom plus directional hot sparks and
+`FireImpactFx` uses a painted flame burst plus directional hot sparks and
 independent extra layers. `ImpactTraits` flags combine:
 
 | Trait | Visual response |

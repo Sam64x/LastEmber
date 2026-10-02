@@ -14,10 +14,12 @@ public partial class CoreBolt : Node2D
     public bool ChargeOrbit { get; set; }
     private float _remaining = 620;
     private readonly HashSet<ulong> _hit = new();
+    private EmberProjectileVisual _visual=null!;
     public override void _Ready()
     {
         ZIndex = 28;
         Material = new CanvasItemMaterial { LightMode = CanvasItemMaterial.LightModeEnum.Unshaded };
+        _visual=new EmberProjectileVisual();AddChild(_visual);_visual.Configure(Direction,Blue,ArmorBreak);
     }
     public override void _PhysicsProcess(double delta)
     {
@@ -41,15 +43,10 @@ public partial class CoreBolt : Node2D
             Run.Fx.FireImpact(contact, Direction, .4f, Blue,ImpactTraits.Projectile);
             if (--Targets <= 0) { QueueFree(); return; }
         }
-        if (!Run.Room.HasLineOfSight(previous, next) || !Run.Room.Bounds.HasPoint(next)) { QueueFree(); return; }
+        if (!Run.Room.HasLineOfSight(previous, next) || !Run.Room.Bounds.HasPoint(next))
+        { Run.Fx.FireImpact(previous,-Direction,.22f,Blue,ImpactTraits.Projectile);QueueFree();return; }
         Position = next; _remaining -= travel;
-        if (_remaining <= 0) QueueFree(); else QueueRedraw();
-    }
-    public override void _Draw()
-    {
-        var color = FlamePalette.Fire(Blue);
-        if(ArmorBreak)DrawLine(-Direction*30,Direction*8,new Color(.9f,.95f,1,.65f),3,true);
-        DrawLine(-Direction * 24, Vector2.Zero, new Color(color, .5f), 9, true);
-        DrawCircle(Vector2.Zero, 6, color); DrawCircle(Vector2.Zero, 2.5f, Colors.White);
+        if (_remaining <= 0) QueueFree();
+        else _visual.Configure(Direction,Blue,ArmorBreak,opacity:Mathf.Clamp(_remaining/45,0,1));
     }
 }

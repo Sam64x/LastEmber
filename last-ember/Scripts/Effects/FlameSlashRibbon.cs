@@ -17,12 +17,14 @@ public partial class FlameSlashRibbon : Node2D
     public void Configure(Vector2 origin,Vector2 aim,float start,float head,float size,float width,float fade,float age,float seed,float charge,bool blue,float power,float lifeProgress=0)
     {
         Position=origin;_size=size;_width=width;_charge=charge;_reverse=head<start;
-        Scale=new Vector2(1,_reverse?-1:1);
-        Rotation=aim.Angle()+Mathf.Lerp(-.16f,.1f,lifeProgress)*(_reverse?-1:1);
+        float unfurl=Mathf.Lerp(.7f,1,Mathf.SmoothStep(0,.035f,age));
+        Scale=new Vector2(unfurl,(_reverse?-1:1)*unfurl);
+        Rotation=aim.Angle()+Mathf.Lerp(-.28f,.12f,Mathf.SmoothStep(0,.55f,lifeProgress))*(_reverse?-1:1);
         Visible=fade>.005f&&Mathf.Abs(head-start)>.01f;
         _material.SetShaderParameter("effect_age",age);_material.SetShaderParameter("seed",seed);
-        _material.SetShaderParameter("opacity",fade);_material.SetShaderParameter("power",power);
-        _material.SetShaderParameter("phase",Mathf.Clamp(lifeProgress*3,0,3));
+        _material.SetShaderParameter("opacity",fade);_material.SetShaderParameter("power",power+Mathf.Exp(-age*45)*.6f);
+        float phase=lifeProgress<.32f?lifeProgress/.32f*.65f:.65f+(lifeProgress-.32f)/.68f*2.35f;
+        _material.SetShaderParameter("phase",Mathf.Clamp(phase,0,3));
         _material.SetShaderParameter("blue_blend",blue?1f:0f);QueueRedraw();
     }
     public override void _Draw()

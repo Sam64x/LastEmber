@@ -14,7 +14,13 @@ public partial class Projectile : Node2D, IDungeonReactive
         if(Fire && impact==DungeonImpact.Suction && !blue){Hide();QueueFree();}
     }
     private float _life = 5;
-    public override void _Ready() { ZIndex = 12; AddToGroup("dungeon_reactive"); }
+    private EmberProjectileVisual _visual=null!;
+    public override void _Ready()
+    {
+        ZIndex=12;AddToGroup("dungeon_reactive");
+        _visual=new EmberProjectileVisual();AddChild(_visual);
+        _visual.Configure(Velocity,false,tint:Tint);
+    }
     public override void _PhysicsProcess(double delta)
     {
         if (!Run.Playing || IsQueuedForDeletion()) return;
@@ -23,11 +29,6 @@ public partial class Projectile : Node2D, IDungeonReactive
         if (_life <= 0 || !Run.Room.HasLineOfSight(previous, Position) || !Run.Room.Bounds.HasPoint(Position)) { QueueFree(); return; }
         if (Geometry2D.GetClosestPointToSegment(Run.Player.Position, previous, Position).DistanceTo(Run.Player.Position) < 21)
         { Run.Player.TakeDamage(new DamageInfo(Damage, previous, 80)); QueueFree(); }
-        QueueRedraw();
-    }
-    public override void _Draw()
-    {
-        DrawLine(-Velocity.Normalized()*20,Vector2.Zero,new Color(Tint,.5f),6,true);
-        DrawCircle(Vector2.Zero,6,Tint); DrawCircle(Vector2.Zero,2,Colors.White);
+        _visual.Configure(Velocity,false,tint:Tint,opacity:Mathf.Clamp(_life/.1f,0,1));
     }
 }

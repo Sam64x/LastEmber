@@ -13,14 +13,13 @@ public partial class FireImpactFx : Node2D
     private float _strength,_age,_seed;
     private bool _blue;
     private ImpactTraits _traits;
-    private ShaderMaterial _bloomMaterial=null!;
+    private EmberSplashFx _bloom=null!;
     private readonly Vector2[] _velocities=new Vector2[36],_shard=new Vector2[4];
     private bool Has(ImpactTraits trait)=>(_traits&trait)!=0;
     public override void _Ready()
     {
         ZIndex=2;Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};Hide();
-        _bloomMaterial=new ShaderMaterial {Shader=ResourceLoader.Load<Shader>("res://Assets/Shaders/impact_bloom.gdshader")};
-        AddChild(new ColorRect {Position=new Vector2(-54,-54),Size=new Vector2(108,108),Material=_bloomMaterial,MouseFilter=Control.MouseFilterEnum.Ignore,ZIndex=-1});
+        _bloom=new EmberSplashFx {ProcessMode=ProcessModeEnum.Disabled,ZIndex=-1};AddChild(_bloom);
     }
     public void Begin(Vector2 position,Vector2 direction,float strength,bool blue,ImpactTraits traits,ulong seed)
     {
@@ -32,14 +31,12 @@ public partial class FireImpactFx : Node2D
             float spread=Has(ImpactTraits.Critical)||Has(ImpactTraits.Charged)?2.3f:1.25f;
             _velocities[i]=_direction.Rotated(rng.RandfRange(-spread,spread))*rng.RandfRange(75,Has(ImpactTraits.Critical)?360:260);
         }
-        _bloomMaterial.SetShaderParameter("seed",_seed);
-        _bloomMaterial.SetShaderParameter("blue_blend",blue?1f:0f);
-        _bloomMaterial.SetShaderParameter("critical",Has(ImpactTraits.Critical)?1f:0f);
-        _bloomMaterial.SetShaderParameter("strength",_strength);
+        float radius=(32+_strength*20)*(Has(ImpactTraits.Critical)?1.3f:1)*(Has(ImpactTraits.Charged)?1.15f:1);
+        _bloom.Begin(Vector2.Zero,radius,blue,true);_bloom.Rotation=_seed*.013f;
         Active=true;Show();UpdateBloom();QueueRedraw();
     }
     public void Cancel(){Active=false;Hide();}
-    private void UpdateBloom()=>_bloomMaterial.SetShaderParameter("effect_age",_age);
+    private void UpdateBloom()=>_bloom.Seek(_age);
     internal void SeekPreview(float age){_age=age;Visible=age>=0&&age<.85f;UpdateBloom();QueueRedraw();}
     public override void _Process(double delta)
     {

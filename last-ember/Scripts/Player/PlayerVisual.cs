@@ -11,20 +11,14 @@ public partial class PlayerVisual : Node2D
     private static Texture2D? _atlas;
     private LivingFlame _flame=null!;
     private Sprite2D _warmMask=null!;
-    private readonly Vector2[] _trail=new Vector2[7];
-    private readonly float[] _trailLife=new float[7];
-    private readonly int[] _trailFrame=new int[7];
-    private readonly bool[] _trailFlip=new bool[7];
-    private readonly Vector2[] _quad=new Vector2[4],_uv=new Vector2[4];
-    private readonly Color[] _colors=new Color[4];
-    private readonly Vector2[] _ribbon=new Vector2[42];
+    private readonly Vector2[] _quad=new Vector2[4];
+    private DashWake _wake=null!;
+    private float _dashRecovery=1;
+    private bool _wasDashing;
     private Vector2 _dashVector=Vector2.Right,_hurtDirection;
     private float _dashAge=1,_castAge=1;
     private bool _castBlue;
-    private int _slot;
-    private float _time,_fireTime,_gait,_blue,_hurt,_death=-1,_trailClock;
-    private bool _flip;
-    private int _direction;
+    private float _time,_fireTime,_gait,_blue,_hurt,_death=-1;
     private Vector2 _lean;
     public static Texture2D Atlas=>_atlas??=ResourceLoader.Load<Texture2D>("res://Assets/Characters/ember-mask-atlas-v2.png");
     public override void _Ready()
@@ -34,6 +28,7 @@ public partial class PlayerVisual : Node2D
         TextureFilter=TextureFilterEnum.Linear;
         _=Atlas;
         _flame=new LivingFlame {ZIndex=1};AddChild(_flame);
+        _wake=new DashWake {ZIndex=-1};AddChild(_wake);
         var maskMaterial=new ShaderMaterial {Shader=ResourceLoader.Load<Shader>("res://Assets/Shaders/ember_mask.gdshader")};
         _maskMaterial=maskMaterial;
         _warmMask=new Sprite2D {Texture=Atlas,Hframes=3,Vframes=2,Offset=new Vector2(0,-Atlas.GetHeight()/2f*.1f),Material=maskMaterial,ZIndex=2};
@@ -41,12 +36,16 @@ public partial class PlayerVisual : Node2D
         SyncBody();
     }
     public void Hurt(Vector2 direction){_hurt=.26f;_hurtDirection=direction;}
-    public void Dash(Vector2 direction){_dashVector=direction.Normalized();_dashAge=0;}
+    public void Dash(Vector2 direction)
+    {
+        _dashVector=direction.LengthSquared()>.001f?direction.Normalized():_motion.Facing;
+        _dashAge=0;_dashRecovery=0;_wake.Begin(GlobalPosition,_input.Blue);
+    }
     public void Cast(bool blue){_castAge=0;_castBlue=blue;}
     public void Die(){_death=0;QueueRedraw();}
     public void ResetForRoom()
     {
-        System.Array.Clear(_trailLife);_lean=Vector2.Zero;_trailClock=0;
+        _wake.Clear();_lean=Vector2.Zero;_dashRecovery=1;_wasDashing=false;
         _motion.Reset();_input=HeroVisualInput.Idle;_death=-1;
         _dashAge=_castAge=1;_hurt=0;
         SyncBody();QueueRedraw();
@@ -65,11 +64,14 @@ public partial class PlayerVisual : Node2D
         var offset=_input.StrikeOffset+_lean*2+sway+new Vector2(0,-bob+dying*5)+_hurtDirection*Mathf.Sin(_hurt/.26f*Mathf.Pi)*3;
         return (offset,_input.StrikeRotation+_lean.X*.11f+_motion.Turn*.045f,scale,dying);
     }
+    private float DashBlend=>_input.Dashing?Mathf.SmoothStep(0,.045f,_dashAge):1-Mathf.SmoothStep(0,.18f,_dashRecovery);
     private void SyncBody()
     {
         var pose=BodyPose();
         var body=new Transform2D(pose.Rotation,pose.Scale,0,pose.Offset);
-        float stretch=_input.Dashing?.24f:_dashAge<.5f?Mathf.Exp(-Mathf.Max(0,_dashAge-_input.DashDuration)*22)*.12f:0;
+        float dashBlend=DashBlend;
+        float stretch=dashBlend*.24f;
+        if(_input.Dashing)stretch-=Mathf.Sin(Mathf.Clamp(_dashAge/.04f,0,1)*Mathf.Pi)*.1f;
         var d=_dashVector;float along=1+stretch,across=1-stretch*.45f;
         float cross=(along-across)*d.X*d.Y;
         var deformation=new Transform2D(new Vector2(along*d.X*d.X+across*d.Y*d.Y,cross),new Vector2(cross,along*d.Y*d.Y+across*d.X*d.X),Vector2.Zero);
@@ -77,7 +79,7 @@ public partial class PlayerVisual : Node2D
         _flame.Transform=body;
         float surge=_input.Dashing?1:Mathf.Exp(-_dashAge*12)*.5f;
         surge+=_castAge<.5f?Mathf.Sin(_castAge/.5f*Mathf.Pi)*.5f:0;
-        _flame.Update(_fireTime,_blue,1-pose.Dying,_motion.Airflow.Rotated(-pose.Rotation),surge,_motion.Movement,_motion.Turn);
+        _flame.Update(_fireTime,_blue,1-pose.Dying,_motion.Airflow.Rotated(-pose.Rotation),surge,_motion.Movement,_motion.Turn,_dashVector.Rotated(-pose.Rotation),dashBlend);
         _maskMaterial.SetShaderParameter("facing",_motion.Facing);
         _maskMaterial.SetShaderParameter("breath",Mathf.Sin(_time*2.4f));
         _maskMaterial.SetShaderParameter("blue_blend",_blue);
@@ -98,6 +100,10 @@ public partial class PlayerVisual : Node2D
     public void Advance(float delta,HeroVisualInput input)
     {
         _input=input;float dt=Mathf.Clamp(delta,0,.1f);_motion.Step(dt,input);
+        if(_wasDashing&&!input.Dashing)_dashRecovery=0;
+        if(!input.Dashing)_dashRecovery=Mathf.Min(1,_dashRecovery+dt);
+        _wasDashing=input.Dashing;
+        _wake.Advance(dt,input.Dashing&&_death<0,GlobalPosition);
         _time+=dt;_hurt=Mathf.Max(0,_hurt-dt);
         _fireTime+=dt*(1+_motion.Movement*.2f+(input.Dashing?.6f:0));
         _dashAge=Mathf.Min(1,_dashAge+dt);_castAge=Mathf.Min(1,_castAge+dt);
@@ -105,64 +111,11 @@ public partial class PlayerVisual : Node2D
         _gait=_motion.Gait;
         _blue=Mathf.Lerp(_blue,input.Blue?1:0,1-Mathf.Exp(-dt*12));
         _lean=_motion.Lean;
-        var aim=_motion.Facing;
-        _direction=aim.Y<-.45f?2:Mathf.Abs(aim.X)>.55f?1:0;
-        _flip=aim.X<0;
-        for(int i=0;i<_trail.Length;i++)_trailLife[i]=Mathf.Max(0,_trailLife[i]-dt);
-        _trailClock-=dt;
-        if(input.Dashing && _trailClock<=0)
-        {
-            _trailClock=.025f;_slot=(_slot+1)%_trail.Length;
-            _trail[_slot]=GlobalPosition;_trailLife[_slot]=.2f;
-            _trailFrame[_slot]=_direction+(input.Blue?3:0);
-            _trailFlip[_slot]=_flip;
-        }
         SyncBody();QueueRedraw();
-    }
-    private Rect2 Source(int frame)
-    {
-        var cell=Atlas.GetSize()/new Vector2(3,2);
-        return new Rect2(new Vector2(frame%3,frame/3)*cell,cell);
-    }
-    private void Sprite(Vector2 center,int frame,Color tint,Vector2 scale,bool? flip=null)
-    {
-        // The mask center anchors physics; the fire floats around it.
-        var cell=Atlas.GetSize()/new Vector2(3,2);
-        var size=new Vector2(64,64*cell.Y/cell.X)*scale;
-        var rect=new Rect2(center-new Vector2(size.X*.5f,size.Y*.6f),size);
-        if(flip??_flip){rect.Position+=new Vector2(size.X,0);rect.Size=new Vector2(-size.X,size.Y);}
-        var source=Source(frame);var textureSize=Atlas.GetSize();
-        for(int i=0;i<4;i++)_colors[i]=tint;
-        // A continuous strip mesh lets the flame envelope move independently
-        // while keeping the mask and eyes steady. Adjacent edges share vertices.
-        float Wave(float y)
-        {
-            float crown=Mathf.Clamp((.32f-y)/.32f,0,1);
-            float tail=Mathf.Clamp((y-.78f)/.22f,0,1);
-            float speed=_input.Dashing?12:_input.Velocity.Length()>30?8:5;
-            return Mathf.Sin(_time*speed+y*12+frame%3)*crown*1.7f+
-                Mathf.Sin(_time*7-y*9)*tail*1.2f;
-        }
-        for(int band=0;band<10;band++)
-        {
-            float top=band/10f,bottom=(band+1)/10f;
-            var a=rect.Position+new Vector2(Wave(top),rect.Size.Y*top);
-            var b=rect.Position+new Vector2(Wave(bottom),rect.Size.Y*bottom);
-            _quad[0]=a;_quad[1]=a+new Vector2(rect.Size.X,0);
-            _quad[2]=b+new Vector2(rect.Size.X,0);_quad[3]=b;
-            _uv[0]=(source.Position+new Vector2(0,source.Size.Y*top))/textureSize;
-            _uv[1]=_uv[0]+new Vector2(source.Size.X/textureSize.X,0);
-            _uv[3]=(source.Position+new Vector2(0,source.Size.Y*bottom))/textureSize;
-            _uv[2]=_uv[3]+new Vector2(source.Size.X/textureSize.X,0);
-            DrawPolygon(_quad,_colors,_uv,Atlas);
-        }
     }
     public override void _Draw()
     {
         var fire=new Color(1,.43f,.1f).Lerp(new Color(.16f,.66f,1),_blue);
-        DrawComet(fire);
-        for(int i=0;i<_trail.Length;i++)
-            if(_trailLife[i]>0)Sprite(ToLocal(_trail[i]),_trailFrame[i],new Color(1,1,1,.26f*_trailLife[i]/.2f),Vector2.One,_trailFlip[i]);
         float dying=_death<0?0:Mathf.Clamp(_death/1.2f,0,1);
         DrawSetTransform(new Vector2(0,7),0,new Vector2(1,.4f));
         DrawCircle(Vector2.Zero,18,new Color(0,0,0,.52f*(1-dying)));
@@ -186,24 +139,6 @@ public partial class PlayerVisual : Node2D
         var marker=_motion.Facing*23;
         DrawLine(marker-_motion.Facing.Rotated(.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
         DrawLine(marker-_motion.Facing.Rotated(-.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
-    }
-    private void DrawComet(Color fire)
-    {
-        if(_dashAge>=.4f || _death>=0)return;
-        float opacity=_input.Dashing?1:Mathf.Clamp(1-(_dashAge-_input.DashDuration)/.16f,0,1);
-        if(opacity<=.01f)return;
-        var normal=_dashVector.Orthogonal();
-        for(int layer=0;layer<2;layer++)
-        {
-            for(int i=0;i<=20;i++)
-            {
-                float t=i/20f;
-                var center=-_dashVector*(8+t*58)+normal*Mathf.Sin(t*16-_time*22)*t*3;
-                float width=Mathf.Max(.02f,1-t)*(layer==0?8:3.5f)*opacity;
-                _ribbon[i]=center+normal*width;_ribbon[41-i]=center-normal*width;
-            }
-            DrawColoredPolygon(_ribbon,new Color(layer==0?fire:new Color(1,.93f,.75f).Lerp(new Color(.8f,.98f,1),_blue),opacity*(layer==0?.45f:.65f)));
-        }
     }
     private void DrawCast()
     {

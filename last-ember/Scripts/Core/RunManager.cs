@@ -229,7 +229,7 @@ public partial class RunManager : Node
         =>_transient.AddChild(new Projectile {Run=this,Position=origin,Velocity=(target-origin).Normalized()*speed,Damage=damage,Fire=fire,Tint=tint??new Color(1,.45f,.32f)});
     public void Explode(Vector2 origin,float radius,float damage,bool burn)
     {
-        Fx.Ring(origin,radius,FlamePalette.Fire(Player.Flame.LastEmber));Fx.Sparks(origin,FlamePalette.Fire(Player.Flame.LastEmber),24);
+        Fx.Splash(origin,radius,Player.Flame.LastEmber);Fx.Sparks(origin,FlamePalette.Fire(Player.Flame.LastEmber),12);
         foreach(var enemy in Enemies.ToArray())
             if(!enemy.Dead&&enemy.Position.DistanceTo(origin)<radius+enemy.BodyRadius&&Room.HasLineOfSight(origin,enemy.Position)) enemy.TakeDamage(new DamageInfo(damage*Player.Flame.LastEmberDamageMultiplier,origin,320,burn));
     }

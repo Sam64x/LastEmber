@@ -14,9 +14,11 @@ public partial class MeleeWave : Node2D
     public bool Blue { get; set; }
     private float _age;
     private readonly HashSet<ulong> _hit=new();
+    private FlameSlashRibbon _visual=null!;
     public override void _Ready()
     {
         ZIndex=30;Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
+        _visual=new FlameSlashRibbon();AddChild(_visual);
     }
     public override void _PhysicsProcess(double delta)
     {
@@ -36,14 +38,7 @@ public partial class MeleeWave : Node2D
             var direction=(enemy.Position-GlobalPosition).Normalized();
             Run.Fx.FireImpact(enemy.Position-direction*enemy.BodyRadius*.65f,direction,.65f,Blue,ImpactTraits.Wave);
         }
-        if(_age>=.4f)QueueFree();else QueueRedraw();
-    }
-    public override void _Draw()
-    {
-        if(Delay>0)return;
-        float radius=Mathf.Max(4,Radius*Mathf.Clamp(_age/.3f,0,1));
-        var color=FlamePalette.Fire(Blue);color.A=Mathf.Clamp(1-_age/.4f,0,1);
-        DrawArc(Vector2.Zero,radius,Direction.Angle()-1.8f,Direction.Angle()+1.8f,64,color,6,true);
-        DrawArc(Vector2.Zero,Mathf.Max(2,radius-8),Direction.Angle()-1.7f,Direction.Angle()+1.7f,64,new Color(1,1,1,color.A*.65f),2,true);
+        if(_age>=.4f)QueueFree();
+        else _visual.Configure(Vector2.Zero,Direction,-1,1,Mathf.Max(4,radius)/115,26,1-_age/.4f,_age,0,0,Blue,1,_age/.4f);
     }
 }

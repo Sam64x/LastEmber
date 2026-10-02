@@ -101,7 +101,7 @@ public sealed class HeatModule : MeleeModule
         {
             foreach(var other in Owner.Run.Enemies.ToArray())
                 if(!other.Dead&&other!=enemy&&other.Position.DistanceTo(enemy.Position)<190&&Owner.Run.Room.HasLineOfSight(enemy.Position,other.Position))other.AddHeat(spread);
-            Owner.Run.Fx.Ring(enemy.Position,190,FlamePalette.Fire(Owner.Player.Flame.LastEmber));
+            Owner.Run.Fx.Splash(enemy.Position,190,Owner.Player.Flame.LastEmber);
         }
         if(Owner.Random.Randf()<Value(MeleeEffectKind.Fuel))Owner.Player.Flame.Heal(3);
     }

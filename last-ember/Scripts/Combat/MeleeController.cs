@@ -143,6 +143,7 @@ public partial class MeleeController : Node2D
                 Burn=Player.Build.Has(ArtifactEffect.ThirdHitBurn)&&_artifactHits%3==0
             };
             foreach(var module in _modules)module.BeforeHit(strike,enemy,hit);
+            bool armorBroken=strike.ArmorBreak&&enemy.IceArmored;
             if(strike.ArmorBreak)enemy.BreakArmor();
             if(hit.Stagger>0)enemy.Stagger(hit.Stagger);
             if(hit.Heat>0)enemy.AddHeat(hit.Heat);
@@ -150,7 +151,12 @@ public partial class MeleeController : Node2D
             if(direction==Vector2.Zero)direction=strike.Aim;
             var contact=enemy.Position-direction*enemy.BodyRadius*.65f;
             enemy.TakeDamage(new DamageInfo(hit.Damage,Player.Position,hit.Knockback,hit.Burn,Strike:true,Critical:hit.Critical));
-            Run.Fx.FireImpact(contact,direction,Mathf.Max(strike.Charge,Player.Flame.Ratio),Player.Flame.LastEmber);
+            var impact=(hit.Critical?ImpactTraits.Critical:ImpactTraits.None)
+                |(strike.FullCharge?ImpactTraits.Charged:ImpactTraits.None)
+                |(strike.Step==3?ImpactTraits.Finisher:ImpactTraits.None)
+                |(armorBroken?ImpactTraits.ArmorBreak:enemy.IceArmored?ImpactTraits.Armored:ImpactTraits.None)
+                |(hit.Burn?ImpactTraits.Ignite:ImpactTraits.None);
+            Run.Fx.FireImpact(contact,direction,Mathf.Max(strike.Charge,Player.Flame.Ratio),Player.Flame.LastEmber,impact);
             if(hit.Critical)
             {
                 critical=true;

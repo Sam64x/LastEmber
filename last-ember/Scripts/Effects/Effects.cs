@@ -16,11 +16,15 @@ public partial class Effects : Node2D
     private readonly List<Particle> _particles = new();
     private readonly RandomNumberGenerator _rng = new();
     private readonly CriticalLightningFx[] _criticalPool=new CriticalLightningFx[8];
+    private readonly FireImpactFx[] _impactPool=new FireImpactFx[24];
+    private int _impactCursor;
+    private ulong _impactSeed;
     private ulong _criticalSeed;
     public override void _Ready()
     {
         ZIndex=25;_rng.Randomize();
         for(int i=0;i<_criticalPool.Length;i++){_criticalPool[i]=new CriticalLightningFx();AddChild(_criticalPool[i]);}
+        for(int i=0;i<_impactPool.Length;i++){_impactPool[i]=new FireImpactFx();AddChild(_impactPool[i]);}
     }
     public void CriticalImpact(Vector2 position,Vector2 direction,float intensity,bool blue)
     {
@@ -37,6 +41,7 @@ public partial class Effects : Node2D
         foreach(var child in GetChildren())
         {
             if(child is CriticalLightningFx critical)critical.Cancel();
+            else if(child is FireImpactFx impact)impact.Cancel();
             else {if(child is CanvasItem canvas)canvas.Hide();child.QueueFree();}
         }
         QueueRedraw();
@@ -55,8 +60,17 @@ public partial class Effects : Node2D
         => _particles.Add(new Particle { Position = position, Size = 16, Color = FlamePalette.Fire(blue), Life = .25f, Max = .25f, Kind = 2 });
     public void Text(Vector2 position, string label, Color color)
         => _particles.Add(new Particle { Position = position, Velocity = new Vector2(0, -35), Label = label, Color = color, Life = .85f, Max = .85f, Kind = 3 });
-    public void FireImpact(Vector2 position,Vector2 direction,float strength,bool blue=false)
-        =>AddChild(new FireImpactFx {Position=position,Direction=direction,Strength=strength,Blue=blue});
+    public void FireImpact(Vector2 position,Vector2 direction,float strength,bool blue=false,ImpactTraits traits=ImpactTraits.None)
+    {
+        for(int i=0;i<_impactPool.Length;i++)
+        {
+            int index=(_impactCursor+i)%_impactPool.Length;
+            if(_impactPool[index].Active)continue;
+            _impactCursor=index;break;
+        }
+        _impactPool[_impactCursor].Begin(position,direction,strength,blue,traits,++_impactSeed*7919);
+        _impactCursor=(_impactCursor+1)%_impactPool.Length;
+    }
     public void FlameTransition(Vector2 position,bool blue)
         =>AddChild(new FlameTransitionFx {Position=position,Blue=blue});
     public override void _Process(double delta)

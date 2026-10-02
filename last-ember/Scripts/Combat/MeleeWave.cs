@@ -33,6 +33,8 @@ public partial class MeleeWave : Node2D
             _hit.Add(enemy.GetInstanceId());
             if(Heat>0)enemy.AddHeat(Heat);
             enemy.TakeDamage(new DamageInfo(Damage,GlobalPosition,320));
+            var direction=(enemy.Position-GlobalPosition).Normalized();
+            Run.Fx.FireImpact(enemy.Position-direction*enemy.BodyRadius*.65f,direction,.65f,Blue,ImpactTraits.Wave);
         }
         if(_age>=.4f)QueueFree();else QueueRedraw();
     }

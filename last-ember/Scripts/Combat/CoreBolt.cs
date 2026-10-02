@@ -38,7 +38,7 @@ public partial class CoreBolt : Node2D
             if(ArmorBreak)enemy.BreakArmor();
             if(ChargeOrbit)Run.Player.Cores.OnBoltHit();
             enemy.TakeDamage(new DamageInfo(Damage, previous, 100));
-            Run.Fx.FireImpact(contact, Direction, .4f, Blue);
+            Run.Fx.FireImpact(contact, Direction, .4f, Blue,ImpactTraits.Projectile);
             if (--Targets <= 0) { QueueFree(); return; }
         }
         if (!Run.Room.HasLineOfSight(previous, next) || !Run.Room.Bounds.HasPoint(next)) { QueueFree(); return; }

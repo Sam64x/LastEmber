@@ -110,7 +110,7 @@ public partial class CoreCombatController : Node2D
             if (!crossed && !landing) continue;
             _dashHit.Add(enemy.GetInstanceId());
             enemy.TakeDamage(new DamageInfo(Damage * (1 + Build.Value(MeleeEffectKind.DashImpact)), current, 300));
-            Run.Fx.FireImpact(contact, (enemy.Position - current).Normalized(), .6f, Player.Flame.LastEmber);
+            Run.Fx.FireImpact(contact, (enemy.Position - current).Normalized(), .6f, Player.Flame.LastEmber,ImpactTraits.Arc);
         }
         _trailClock -= dt;
         if (Build.Has(MeleeEffectKind.DashTrail) && _trailClock <= 0)

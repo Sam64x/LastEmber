@@ -6,14 +6,15 @@ public partial class FireStrikeFx : Node2D
 {
     private sealed class Stroke
     {
-        public bool Active,Released;
+        public bool Active,Released,Blue;
         public StrikeStyleData Style=null!;
         public Vector2 Aim,Origin;
         public float Age,Power,Size,Windup,Sweep,Tail,Seed,Charge;
     }
     public bool Blue { get; set; }
     private readonly Stroke[] _strokes={new(),new(),new()};
-    private readonly Vector2[] _ribbon=new Vector2[98],_blade=new Vector2[4];
+    private readonly FlameSlashRibbon[] _layers=new FlameSlashRibbon[3];
+    private readonly Vector2[] _blade=new Vector2[4];
     private readonly StrikeStyleData _basic=new();
     private int _slot=-1,_serial;
     private bool _charging;
@@ -26,7 +27,8 @@ public partial class FireStrikeFx : Node2D
         {
             if(_charging)return -_chargeAim*(3+5*_charge);
             var s=Current;if(s==null||!s.Active)return Vector2.Zero;
-            return s.Aim*(s.Released?s.Style.BodyImpulse*Mathf.Exp(-s.Age*19):-6*Mathf.SmoothStep(0,1,Mathf.Clamp(s.Age/s.Windup,0,1)));
+            float recover=Mathf.SmoothStep(.035f,.09f,s.Age)*Mathf.Sin(Mathf.Clamp(s.Age/.25f,0,1)*Mathf.Pi)*2;
+            return s.Aim*(s.Released?s.Style.BodyImpulse*Mathf.Exp(-s.Age*19)-recover:-6*Mathf.SmoothStep(0,1,Mathf.Clamp(s.Age/s.Windup,0,1)));
         }
     }
     public float BodyRotation
@@ -51,6 +53,7 @@ public partial class FireStrikeFx : Node2D
     public override void _Ready()
     {
         ZIndex=18;Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
+        for(int i=0;i<_layers.Length;i++){_layers[i]=new FlameSlashRibbon();AddChild(_layers[i]);}
     }
     public void Begin(Vector2 aim,float strength)=>Begin(aim,strength,_basic,1,.065f,1,0);
     public void Begin(Vector2 aim,float strength,StrikeStyleData style,float size,float windup,float tempo,float charge)
@@ -59,12 +62,12 @@ public partial class FireStrikeFx : Node2D
         var s=_strokes[_slot];s.Active=true;s.Released=false;s.Style=style;s.Aim=aim;s.Age=0;
         s.Power=Mathf.Clamp(strength,0,1);s.Size=size;s.Windup=Mathf.Max(.02f,windup);
         s.Sweep=Mathf.Max(.045f,style.SweepSeconds/Mathf.Sqrt(tempo));s.Tail=Mathf.Max(.09f,style.TailSeconds/Mathf.Sqrt(tempo));
-        s.Seed=++_serial*2.39f;s.Charge=charge;QueueRedraw();
+        s.Seed=++_serial*2.39f;s.Charge=charge;s.Blue=Blue;RefreshRibbons();QueueRedraw();
     }
     public void Release()
     {
         var s=Current;if(s==null)return;
-        s.Released=true;s.Age=0;s.Origin=GlobalPosition;QueueRedraw();
+        s.Released=true;s.Age=0;s.Origin=GlobalPosition;RefreshRibbons();QueueRedraw();
     }
     public void ShowCharge(Vector2 aim,float ratio)
     {
@@ -72,7 +75,7 @@ public partial class FireStrikeFx : Node2D
         _charging=true;_chargeAim=aim;_charge=ratio;QueueRedraw();
     }
     public void StopCharge(){_charging=false;_charge=0;QueueRedraw();}
-    public void Clear(){foreach(var s in _strokes)s.Active=false;StopCharge();QueueRedraw();}
+    public void Clear(){foreach(var s in _strokes)s.Active=false;foreach(var layer in _layers)layer.Hide();StopCharge();QueueRedraw();}
     public override void _Process(double delta)
     {
         float dt=(float)delta;bool redraw=_charging;
@@ -82,7 +85,27 @@ public partial class FireStrikeFx : Node2D
             if(!s.Active)continue;redraw=true;s.Age+=dt;
             if(s.Released&&s.Age>s.Sweep+s.Tail)s.Active=false;
         }
-        if(redraw){QueueRedraw();if(GetParent() is CanvasItem body)body.QueueRedraw();}
+        if(redraw){RefreshRibbons();QueueRedraw();if(GetParent() is CanvasItem body)body.QueueRedraw();}
+    }
+    private void RefreshRibbons()
+    {
+        for(int i=0;i<_strokes.Length;i++)
+        {
+            var s=_strokes[i];var layer=_layers[i];
+            if(!s.Active){layer.Hide();continue;}
+            float ready=Mathf.Clamp(s.Age/s.Windup,0,1);
+            float progress=1-Mathf.Pow(1-Mathf.Clamp(s.Age/s.Sweep,0,1),3);
+            float head=s.Released?Mathf.Lerp(0,s.Style.EndAngle,progress):Mathf.Lerp(s.Style.StartAngle,0,Mathf.Clamp((ready-.65f)/.35f,0,1));
+            float fade=s.Released?1-Mathf.SmoothStep(s.Sweep*.3f,s.Sweep+s.Tail,s.Age):.4f*ready;
+            layer.Configure(s.Released?ToLocal(s.Origin):Vector2.Zero,s.Aim,s.Style.StartAngle,head,s.Size,s.Style.Width,fade,s.Age,s.Seed,s.Charge,s.Blue,s.Power);
+        }
+    }
+    internal void SeekPreview(float age)
+    {
+        var s=Current;if(s==null)return;
+        s.Active=age<s.Windup+s.Sweep+s.Tail;s.Released=age>=s.Windup;
+        s.Age=s.Released?age-s.Windup:age;s.Origin=GlobalPosition;
+        RefreshRibbons();QueueRedraw();
     }
     public override void _Draw()
     {
@@ -94,46 +117,14 @@ public partial class FireStrikeFx : Node2D
             {
                 float ready=Mathf.Clamp(s.Age/s.Windup,0,1);
                 var palm=s.Aim.Rotated(s.Style.StartAngle)*(22+ready*14);
-                DrawCircle(palm,3+ready*5,FlamePalette.Shift(new Color(1,.55f,.16f,.8f*ready),Blue));
-                if(ready>.65f)Ribbon(s,origin,Mathf.Lerp(s.Style.StartAngle,0,(ready-.65f)/.35f),.4f*ready);
+                DrawCircle(palm,3+ready*5,FlamePalette.Shift(new Color(1,.55f,.16f,.8f*ready),s.Blue));
                 continue;
             }
-            float progress=1-Mathf.Pow(1-Mathf.Clamp(s.Age/s.Sweep,0,1),3);
             float fade=1-Mathf.SmoothStep(s.Sweep*.3f,s.Sweep+s.Tail,s.Age);
-            float head=Mathf.Lerp(0,s.Style.EndAngle,progress);
-            Ribbon(s,origin,head,fade);
             if(s.Style.Cleave||s.Charge>=.999f)Cleave(s,origin,fade);
             Cinders(s,origin,fade);
         }
         if(_charging)ChargeFilaments();
-    }
-    private void Ribbon(Stroke s,Vector2 origin,float head,float fade)
-    {
-        if(Mathf.Abs(head-s.Style.StartAngle)<.01f)return;
-        float power=Blue?Mathf.Max(.7f,s.Power):Mathf.Lerp(.5f,1,s.Power);
-        for(int layer=0;layer<4;layer++)
-        {
-            float widthScale=layer==0?1.45f:layer==1?1:layer==2?.48f:.13f;
-            for(int i=0;i<=48;i++)
-            {
-                float t=i/48f,angle=Mathf.Lerp(s.Style.StartAngle,head,t);
-                float taper=Mathf.Pow(Mathf.Max(.001f,Mathf.Sin(t*Mathf.Pi)),.6f);
-                float ripple=Mathf.Sin(t*39+s.Seed-s.Age*24)*.35f+Mathf.Sin(t*77+s.Seed)*.18f;
-                float radius=(79+Mathf.Sin(t*8+s.Seed)*4)*s.Size;
-                float width=s.Style.Width*s.Size*widthScale*taper*fade*(1+ripple*.3f)*(1+s.Charge*.35f);
-                var direction=s.Aim.Rotated(angle);
-                _ribbon[i]=origin+direction*(radius+width);
-                _ribbon[97-i]=origin+direction*Mathf.Max(1,radius-width*.55f);
-            }
-            var color=layer switch
-            {
-                0=>new Color(.88f,.15f,.025f,fade*.12f),
-                1=>new Color(1,.31f,.035f,fade*.85f),
-                2=>new Color(1,.72f,.19f,fade),
-                _=>new Color(1,.98f,.83f,fade*.95f)
-            };
-            color=FlamePalette.Shift(color,Blue);color.A*=power;DrawColoredPolygon(_ribbon,color);
-        }
     }
     private void Cleave(Stroke s,Vector2 origin,float fade)
     {
@@ -144,10 +135,10 @@ public partial class FireStrikeFx : Node2D
             float width=(18-i*6)*flash;
             _blade[0]=origin+axis*12-across*width;_blade[1]=origin+axis*reach;
             _blade[2]=origin+axis*12+across*width;_blade[3]=origin-axis*4;
-            DrawColoredPolygon(_blade,FlamePalette.Shift(new Color(1,i==2?.97f:.55f,i==2?.8f:.12f,flash*(i==0?.18f:.6f)),Blue));
+            DrawColoredPolygon(_blade,FlamePalette.Shift(new Color(1,i==2?.97f:.55f,i==2?.8f:.12f,flash*(i==0?.18f:.6f)),s.Blue));
         }
         DrawArc(origin+axis*55,35+45*(1-flash),axis.Angle()-1.2f,axis.Angle()+1.2f,36,
-            FlamePalette.Shift(new Color(1,.8f,.35f,flash*fade*.55f),Blue),3,true);
+            FlamePalette.Shift(new Color(1,.8f,.35f,flash*fade*.55f),s.Blue),3,true);
     }
     private void Cinders(Stroke s,Vector2 origin,float fade)
     {
@@ -155,7 +146,7 @@ public partial class FireStrikeFx : Node2D
         {
             float t=i/11f;var direction=s.Aim.Rotated(Mathf.Lerp(s.Style.StartAngle,s.Style.EndAngle,t));
             var p=origin+direction*(s.Size*90+s.Age*(45+i%4*26));
-            var color=FlamePalette.Shift(new Color(1,Mathf.Lerp(.2f,.8f,fade),.06f,fade*fade*.75f),Blue);
+            var color=FlamePalette.Shift(new Color(1,Mathf.Lerp(.2f,.8f,fade),.06f,fade*fade*.75f),s.Blue);
             DrawLine(p-direction*(3+i%3*3)*fade,p,color,1.2f+i%2,true);
         }
     }

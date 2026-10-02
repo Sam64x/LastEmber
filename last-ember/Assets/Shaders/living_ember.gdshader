@@ -6,6 +6,17 @@ uniform float blue_blend : hint_range(0.0, 1.0) = 0.0;
 uniform float life : hint_range(0.0, 1.0) = 1.0;
 uniform vec2 airflow = vec2(0.0);
 uniform float surge = 0.0;
+uniform float movement = 0.0;
+uniform float turn = 0.0;
+
+void vertex() {
+    // Root remains attached to the mask; crown bends in any screen direction.
+    float crown=clamp((18.0-VERTEX.y)/76.0,0.0,1.0);
+    float flexibility=pow(crown,1.65);
+    VERTEX-=airflow*vec2(20.0,24.0)*flexibility;
+    VERTEX.x+=turn*sin(crown*3.0)*crown*5.0;
+    VERTEX.y-=surge*5.0*crown;
+}
 
 float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -25,13 +36,13 @@ float flow_noise(vec2 p) {
 float plume(vec2 uv, float base_x, float width, float height, float seed) {
     float base_curve = pow((uv.x - base_x) / max(width, 0.05), 2.0);
     float base_y = 0.88 - min(base_curve * 0.08, 0.24);
-    float rise = (base_y - uv.y) / (height * (1.0 + airflow.y * 0.12));
+    float rise = (base_y - uv.y) / height;
     float t = flame_time;
-    vec2 advect = vec2(uv.x * 6.0 + seed, uv.y * 7.0 + t * (2.1 + surge));
+    vec2 advect = vec2(uv.x * 6.0 + seed, uv.y * 7.0 + t * 2.1);
     float broad = flow_noise(advect);
     float detail = flow_noise(advect * 1.83 + vec2(t * 0.32, t * 0.7));
     float bend = (broad - 0.5) * 0.18 * rise + sin(rise * 5.0 - t * 2.7 + seed) * rise * 0.025;
-    bend -= airflow.x * rise * 0.13;
+    bend += sin(rise*9.0-t*8.0+seed)*rise*movement*0.018;
     float taper = width * mix(1.0, 0.12, clamp(rise, 0.0, 1.0));
     float edge_distance = abs(uv.x - base_x - bend) / max(taper, 0.008);
     float edge = edge_distance + (detail - 0.5) * 0.85;

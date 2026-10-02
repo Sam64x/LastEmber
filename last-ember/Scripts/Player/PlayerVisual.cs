@@ -4,10 +4,13 @@ namespace LastEmber;
 // Presentation-only: facing, animation and trails never drive movement or combat.
 public partial class PlayerVisual : Node2D
 {
-    public Player Player {get;set;}=null!;
+    public Player? Player {get;set;}
+    private HeroVisualInput _input=HeroVisualInput.Idle;
+    private readonly HeroMotion _motion=new();
+    private ShaderMaterial _maskMaterial=null!;
     private static Texture2D? _atlas;
     private LivingFlame _flame=null!;
-    private Sprite2D _warmMask=null!,_coldMask=null!;
+    private Sprite2D _warmMask=null!;
     private readonly Vector2[] _trail=new Vector2[7];
     private readonly float[] _trailLife=new float[7];
     private readonly int[] _trailFrame=new int[7];
@@ -19,7 +22,7 @@ public partial class PlayerVisual : Node2D
     private float _dashAge=1,_castAge=1;
     private bool _castBlue;
     private int _slot;
-    private float _time,_gait,_blue,_hurt,_death=-1,_trailClock;
+    private float _time,_fireTime,_gait,_blue,_hurt,_death=-1,_trailClock;
     private bool _flip;
     private int _direction;
     private Vector2 _lean;
@@ -32,9 +35,9 @@ public partial class PlayerVisual : Node2D
         _=Atlas;
         _flame=new LivingFlame {ZIndex=1};AddChild(_flame);
         var maskMaterial=new ShaderMaterial {Shader=ResourceLoader.Load<Shader>("res://Assets/Shaders/ember_mask.gdshader")};
+        _maskMaterial=maskMaterial;
         _warmMask=new Sprite2D {Texture=Atlas,Hframes=3,Vframes=2,Offset=new Vector2(0,-Atlas.GetHeight()/2f*.1f),Material=maskMaterial,ZIndex=2};
-        _coldMask=new Sprite2D {Texture=Atlas,Hframes=3,Vframes=2,Offset=_warmMask.Offset,Material=maskMaterial,ZIndex=2,Visible=false};
-        AddChild(_warmMask);AddChild(_coldMask);
+        AddChild(_warmMask);
         SyncBody();
     }
     public void Hurt(Vector2 direction){_hurt=.26f;_hurtDirection=direction;}
@@ -44,60 +47,74 @@ public partial class PlayerVisual : Node2D
     public void ResetForRoom()
     {
         System.Array.Clear(_trailLife);_lean=Vector2.Zero;_trailClock=0;
+        _motion.Reset();_input=HeroVisualInput.Idle;_death=-1;
         _dashAge=_castAge=1;_hurt=0;
         SyncBody();QueueRedraw();
     }
     private (Vector2 Offset,float Rotation,Vector2 Scale,float Dying) BodyPose()
     {
         float dying=_death<0?0:Mathf.Clamp(_death/1.2f,0,1);
-        float moving=Mathf.Clamp(Player.Velocity.Length()/220,0,1);
-        float bob=Mathf.Sin(_gait*2)*1.1f*moving+Mathf.Sin(_time*3)*1.3f;
-        var scale=Player.VisualBodyScale*new Vector2(1+.018f*Mathf.Sin(_time*5),1+.022f*Mathf.Sin(_time*4));
+        float moving=_motion.Movement;
+        float breath=Mathf.Sin(_time*2.4f);
+        float bob=Mathf.Sin(_gait*2)*1.6f*moving+breath*1.3f*(1-moving*.55f);
+        var scale=_input.StrikeScale*new Vector2(1+.018f*breath-.025f*Mathf.Cos(_gait*2)*moving,1-.015f*breath+.035f*Mathf.Cos(_gait*2)*moving);
         scale*=new Vector2(1-dying*.5f,1-dying*.5f);
-        float stretch=Player.Dashing?.22f:Mathf.Exp(-Mathf.Max(0,_dashAge-Player.DashDuration)*22)*.12f;
-        if(_dashAge>=.5f)stretch=0;
-        scale*=new Vector2(1+stretch*(Mathf.Abs(_dashVector.X)*2-1),1+stretch*(Mathf.Abs(_dashVector.Y)*2-1));
         float gather=_castAge<.15f?Mathf.Sin(_castAge/.15f*Mathf.Pi)*.12f:0;
         scale*=new Vector2(1-gather,1+gather);
-        var offset=Player.VisualBodyOffset+new Vector2(_lean.X*2,-bob+dying*5)+_hurtDirection*Mathf.Sin(_hurt/.26f*Mathf.Pi)*3;
-        return (offset,Player.VisualBodyRotation+_lean.X*.11f,scale,dying);
+        var sway=_motion.Facing.Orthogonal()*Mathf.Sin(_gait)*moving*.65f;
+        var offset=_input.StrikeOffset+_lean*2+sway+new Vector2(0,-bob+dying*5)+_hurtDirection*Mathf.Sin(_hurt/.26f*Mathf.Pi)*3;
+        return (offset,_input.StrikeRotation+_lean.X*.11f+_motion.Turn*.045f,scale,dying);
     }
     private void SyncBody()
     {
         var pose=BodyPose();
-        _flame.Position=pose.Offset;_flame.Rotation=pose.Rotation;_flame.Scale=pose.Scale;
-        _flame.Update(_time,_blue,1-pose.Dying,_lean,Player.Dashing?1:0);
+        var body=new Transform2D(pose.Rotation,pose.Scale,0,pose.Offset);
+        float stretch=_input.Dashing?.24f:_dashAge<.5f?Mathf.Exp(-Mathf.Max(0,_dashAge-_input.DashDuration)*22)*.12f:0;
+        var d=_dashVector;float along=1+stretch,across=1-stretch*.45f;
+        float cross=(along-across)*d.X*d.Y;
+        var deformation=new Transform2D(new Vector2(along*d.X*d.X+across*d.Y*d.Y,cross),new Vector2(cross,along*d.Y*d.Y+across*d.X*d.X),Vector2.Zero);
+        body=deformation*body;
+        _flame.Transform=body;
+        float surge=_input.Dashing?1:Mathf.Exp(-_dashAge*12)*.5f;
+        surge+=_castAge<.5f?Mathf.Sin(_castAge/.5f*Mathf.Pi)*.5f:0;
+        _flame.Update(_fireTime,_blue,1-pose.Dying,_motion.Airflow.Rotated(-pose.Rotation),surge,_motion.Movement,_motion.Turn);
+        _maskMaterial.SetShaderParameter("facing",_motion.Facing);
+        _maskMaterial.SetShaderParameter("breath",Mathf.Sin(_time*2.4f));
+        _maskMaterial.SetShaderParameter("blue_blend",_blue);
         float pixelScale=64f/(Atlas.GetWidth()/3f);
-        _warmMask.Position=_coldMask.Position=pose.Offset;
-        _warmMask.Rotation=_coldMask.Rotation=pose.Rotation;
-        _warmMask.Scale=_coldMask.Scale=pose.Scale*pixelScale;
-        _warmMask.FlipH=_coldMask.FlipH=_flip;
+        _warmMask.Transform=new Transform2D(body.X*pixelScale,body.Y*pixelScale,body.Origin);
+        _warmMask.FlipH=false;
         var tint=_hurt>0?new Color(1.35f,1.2f,1.1f,1-pose.Dying):new Color(1,1,1,1-pose.Dying);
-        _warmMask.Frame=_direction;_warmMask.Visible=_blue<1;_warmMask.Modulate=tint;
-        _coldMask.Frame=_direction+3;_coldMask.Visible=_blue>0;_coldMask.Modulate=new Color(tint,tint.A*_blue);
+        _warmMask.Frame=0;_warmMask.Modulate=tint;
     }
     public override void _Process(double delta)
     {
+        if(Player==null)return;
         if(!Player.Run.Playing && !(Player.Dead && Player.Run.State==RunState.GameOver))return;
         if(!Player.Dead && !Player.CanProcess())return;
-        float dt=(float)delta;
+        Advance((float)delta,new HeroVisualInput(Player.Dead?Vector2.Zero:Player.GetRealVelocity(),Player.Aim,Player.MoveSpeed,
+            Player.Dashing,Player.DashDuration,Player.Flame.LastEmber,Player.VisualBodyOffset,Player.VisualBodyRotation,Player.VisualBodyScale));
+    }
+    public void Advance(float delta,HeroVisualInput input)
+    {
+        _input=input;float dt=Mathf.Clamp(delta,0,.1f);_motion.Step(dt,input);
         _time+=dt;_hurt=Mathf.Max(0,_hurt-dt);
+        _fireTime+=dt*(1+_motion.Movement*.2f+(input.Dashing?.6f:0));
         _dashAge=Mathf.Min(1,_dashAge+dt);_castAge=Mathf.Min(1,_castAge+dt);
         if(_death>=0)_death=Mathf.Min(1.2f,_death+dt);
-        float speed=Player.Velocity.Length();
-        _gait+=dt*Mathf.Lerp(2,11,Mathf.Clamp(speed/220,0,1));
-        _blue=Mathf.Lerp(_blue,Player.Flame.LastEmber?1:0,1-Mathf.Exp(-dt*12));
-        _lean=_lean.Lerp(Player.Velocity.LimitLength(220)/220,1-Mathf.Exp(-dt*10));
-        var aim=Player.Aim;
+        _gait=_motion.Gait;
+        _blue=Mathf.Lerp(_blue,input.Blue?1:0,1-Mathf.Exp(-dt*12));
+        _lean=_motion.Lean;
+        var aim=_motion.Facing;
         _direction=aim.Y<-.45f?2:Mathf.Abs(aim.X)>.55f?1:0;
         _flip=aim.X<0;
         for(int i=0;i<_trail.Length;i++)_trailLife[i]=Mathf.Max(0,_trailLife[i]-dt);
         _trailClock-=dt;
-        if(Player.Dashing && _trailClock<=0)
+        if(input.Dashing && _trailClock<=0)
         {
             _trailClock=.025f;_slot=(_slot+1)%_trail.Length;
             _trail[_slot]=GlobalPosition;_trailLife[_slot]=.2f;
-            _trailFrame[_slot]=_direction+(Player.Flame.LastEmber?3:0);
+            _trailFrame[_slot]=_direction+(input.Blue?3:0);
             _trailFlip[_slot]=_flip;
         }
         SyncBody();QueueRedraw();
@@ -122,7 +139,7 @@ public partial class PlayerVisual : Node2D
         {
             float crown=Mathf.Clamp((.32f-y)/.32f,0,1);
             float tail=Mathf.Clamp((y-.78f)/.22f,0,1);
-            float speed=Player.Dashing?12:Player.Velocity.Length()>30?8:5;
+            float speed=_input.Dashing?12:_input.Velocity.Length()>30?8:5;
             return Mathf.Sin(_time*speed+y*12+frame%3)*crown*1.7f+
                 Mathf.Sin(_time*7-y*9)*tail*1.2f;
         }
@@ -158,21 +175,22 @@ public partial class PlayerVisual : Node2D
         for(int i=0;i<9;i++)
         {
             float phase=Mathf.PosMod(_time*(.5f+i*.04f)+i*.137f,1);
-            float x=Mathf.Sin(i*7.13f+_time*2)* (8+phase*17)-_lean.X*phase*14;
-            var p=new Vector2(x,-14-phase*30);
-            DrawLine(p,p+new Vector2(-_lean.X*2,-2-i%3),new Color(fire,(1-phase)*.55f*(1-dying)),1,true);
+            float x=Mathf.Sin(i*7.13f+_time*2)* (8+phase*17);
+            var wind=_motion.Airflow.Rotated(-pose.Rotation);
+            var p=new Vector2(x,-14-phase*30)-wind*phase*22;
+            DrawLine(p,p-wind*2+new Vector2(0,-2-i%3),new Color(fire,(1-phase)*.55f*(1-dying)),1,true);
         }
         DrawSetTransform(Vector2.Zero,0,Vector2.One);
         DrawDeath(fire,dying);
         // Small cursor-facing accent replaces the old stick-like aim indicator.
-        var marker=Player.Aim*23;
-        DrawLine(marker-Player.Aim.Rotated(.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
-        DrawLine(marker-Player.Aim.Rotated(-.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
+        var marker=_motion.Facing*23;
+        DrawLine(marker-_motion.Facing.Rotated(.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
+        DrawLine(marker-_motion.Facing.Rotated(-.7f)*4,marker,new Color(fire,.7f*(1-dying)),1,true);
     }
     private void DrawComet(Color fire)
     {
         if(_dashAge>=.4f || _death>=0)return;
-        float opacity=Player.Dashing?1:Mathf.Clamp(1-(_dashAge-Player.DashDuration)/.16f,0,1);
+        float opacity=_input.Dashing?1:Mathf.Clamp(1-(_dashAge-_input.DashDuration)/.16f,0,1);
         if(opacity<=.01f)return;
         var normal=_dashVector.Orthogonal();
         for(int layer=0;layer<2;layer++)

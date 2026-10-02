@@ -3,16 +3,17 @@
 The supplied slash sequence defines a bright curved fire blade with a hot spine,
 tapered ends and trailing cinders. The impact reference defines an asymmetric
 white-hot burst with orange tongues and detached sparks. Their presentation
-backgrounds are not copied into runtime textures. New art is rendered directly
-using continuous shader fields and shaped geometry.
+backgrounds are not copied into runtime textures. Slashes use a transparent painted
+atlas; contact impacts use continuous shader fields and shaped geometry.
 
 `FlameSlashRibbon` and `flame_slash.gdshader` replace flat polygon ribbon layers:
-an artist-shaped crescent carries advected turbulence, heat filaments, torn edges,
-a broad ivory core and warm/cold gradients. Opening/return cuts retain opposite
-sweep directions; finishers and full charge retain their larger profiles and
-forward cleave accent. Preparation, release, tail and cooldown use the existing
+the broad painted crescent carries a creamy core, large flame tongues, torn tails
+and charcoal chips. Four registered phases blend with premultiplied alpha, with
+subtle continuous flame flow. Opening/return cuts mirror vertically; finishers
+and full charge retain their larger profiles. Preparation, release, tail and cooldown use the existing
 strike timeline. Body follow-through now includes a short return overshoot.
 Three overlapping ribbon nodes are reused. Stroke palettes snapshot at ignition.
+See `SLASH_REFERENCE_V2.md` for the atlas, generation prompt and updated previews.
 
 `FireImpactFx` uses a noisy radial fire bloom plus directional hot sparks and
 independent extra layers. `ImpactTraits` flags combine:

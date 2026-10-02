@@ -27,7 +27,7 @@ public partial class LivingFlame : Node2D
         arrays[(int)Mesh.ArrayType.Index]=indices;
         _mesh=new ArrayMesh();_mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles,arrays);
     }
-    public void Update(float time,float blue,float life,Vector2 airflow,float surge,float movement=0,float turn=0)
+    public void Update(float time,float blue,float life,Vector2 airflow,float surge,float movement=0,float turn=0,Vector2 dashDirection=default,float dashBlend=0)
     {
         _flame.SetShaderParameter("flame_time",time);
         _flame.SetShaderParameter("blue_blend",blue);
@@ -36,6 +36,8 @@ public partial class LivingFlame : Node2D
         _flame.SetShaderParameter("surge",surge);
         _flame.SetShaderParameter("movement",movement);
         _flame.SetShaderParameter("turn",turn);
+        _flame.SetShaderParameter("dash_direction",dashDirection);
+        _flame.SetShaderParameter("dash_blend",dashBlend);
     }
     public override void _Draw()=>DrawMesh(_mesh,null);
     public override void _ExitTree(){_mesh.Dispose();_flame.Dispose();}

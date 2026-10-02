@@ -8,14 +8,22 @@ uniform vec2 airflow = vec2(0.0);
 uniform float surge = 0.0;
 uniform float movement = 0.0;
 uniform float turn = 0.0;
+uniform vec2 dash_direction=vec2(1.0,0.0);
+uniform float dash_blend=0.0;
 
 void vertex() {
+    vec2 rest=VERTEX;
     // Root remains attached to the mask; crown bends in any screen direction.
     float crown=clamp((18.0-VERTEX.y)/76.0,0.0,1.0);
     float flexibility=pow(crown,1.65);
     VERTEX-=airflow*vec2(20.0,24.0)*flexibility;
     VERTEX.x+=turn*sin(crown*3.0)*crown*5.0;
     VERTEX.y-=surge*5.0*crown;
+    // The same flame folds into the wake: no upright flame during the dash.
+    vec2 side=vec2(-dash_direction.y,dash_direction.x);
+    vec2 comet=vec2(0.0,8.0)-dash_direction*(18.0-rest.y)*1.18
+        +side*(rest.x*0.72+sin(crown*7.0-flame_time*9.0)*crown*2.0);
+    VERTEX=mix(VERTEX,comet,dash_blend);
 }
 
 float hash21(vec2 p) {
@@ -41,9 +49,9 @@ float plume(vec2 uv, float base_x, float width, float height, float seed) {
     vec2 advect = vec2(uv.x * 6.0 + seed, uv.y * 7.0 + t * 2.1);
     float broad = flow_noise(advect);
     float detail = flow_noise(advect * 1.83 + vec2(t * 0.32, t * 0.7));
-    float bend = (broad - 0.5) * 0.18 * rise + sin(rise * 5.0 - t * 2.7 + seed) * rise * 0.025;
+    float bend = (broad - 0.5) * 0.19 * rise + sin(rise * 5.0 - t * 2.7 + seed) * rise * 0.05;
     bend += sin(rise*9.0-t*8.0+seed)*rise*movement*0.018;
-    float taper = width * mix(1.0, 0.12, clamp(rise, 0.0, 1.0));
+    float taper = width * pow(max(0.02,1.0-clamp(rise,0.0,1.0)),0.68);
     float edge_distance = abs(uv.x - base_x - bend) / max(taper, 0.008);
     float edge = edge_distance + (detail - 0.5) * 0.85;
     float envelope = (1.0 - smoothstep(0.48, 1.12, edge))
@@ -63,9 +71,8 @@ vec3 cold_color(float heat) {
 }
 void fragment() {
     vec2 uv = UV;
-    float density = plume(uv, 0.5, 0.19, 0.83, 0.0);
-    density = max(density, plume(uv, 0.34, 0.11, 0.57, 8.3) * 0.86);
-    density = max(density, plume(uv, 0.66, 0.12, 0.64, 19.2) * 0.91);
+    // One connected asymmetric flame mantle; turbulence supplies small tongues.
+    float density = plume(uv, 0.5, 0.285, 0.68, 0.0);
     float filaments = flow_noise(vec2(uv.x * 12.0, uv.y * 17.0 + flame_time * 5.3));
     float heat = clamp(density * (0.78 + filaments * 0.35), 0.0, 1.0);
     float alpha = smoothstep(0.025, 0.35, density) * (0.58 + heat * 0.42);

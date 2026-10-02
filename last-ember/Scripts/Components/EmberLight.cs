@@ -11,6 +11,9 @@ public partial class EmberLight : PointLight2D
     public bool Lit { get; set; } = true;
     public Color Tint {get;set;}=new Color(1,.63f,.30f);
     public float Intensity {get;set;}=1.35f;
+    public RunManager? Run {get;set;}
+    public bool Flicker {get;set;}
+    private float _flickerTime;
     public bool Contains(Vector2 point) => Lit && Energy>.05f && GlobalPosition.DistanceSquaredTo(point) < Radius * Radius;
     public void ResetRadius(float radius){Radius=radius;TargetRadius=radius;TextureScale=radius/128;}
 
@@ -33,6 +36,7 @@ public partial class EmberLight : PointLight2D
         Color = Tint;
         Energy = Intensity;
         ShadowEnabled = false;
+        _flickerTime=Position.X*.017f+Position.Y*.031f;
     }
     public override void _Process(double delta)
     {
@@ -40,5 +44,10 @@ public partial class EmberLight : PointLight2D
         Color=Color.Lerp(Tint,1-Mathf.Exp(-(float)delta*12));
         TextureScale = Radius / 128;
         Enabled = Lit;
+        if(Flicker && Run!=null)
+        {
+            if(Run.Playing)_flickerTime+=(float)delta;
+            Energy=Intensity*(Run.Visuals.TorchFlicker?1+.025f*Mathf.Sin(_flickerTime*13)+.02f*Mathf.Sin(_flickerTime*21):1);
+        }
     }
 }

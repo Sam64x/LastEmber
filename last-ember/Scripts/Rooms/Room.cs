@@ -68,10 +68,11 @@ public partial class Room : Node2D
         {
             foreach (var position in new[] {new Vector2(340,320),new Vector2(1580,320),new Vector2(340,795),new Vector2(1580,795)})
             {
-                var light = new EmberLight { Position = position, TargetRadius = 340 };
+                var light = new EmberLight { Position = position, TargetRadius = 340, Run=Run, Flicker=true };
                 AddChild(light); Torches.Add(light); Run.Lights.Add(light);
             }
         }
+        if(Run.CurrentRoomPlan!=null)AddChild(new RoomAtmosphere {Room=this});
     }
     public void RefreshNavigation()
     {

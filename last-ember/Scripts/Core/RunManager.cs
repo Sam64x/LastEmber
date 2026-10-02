@@ -32,6 +32,7 @@ public partial class RunManager : Node
     public Effects Fx { get; private set; } = null!;
     public GameAudio Audio { get; private set; } = null!;
     public MusicDirector Music { get; private set; } = null!;
+    public VisualSettings Visuals { get; } = new();
     public List<Enemy> Enemies { get; } = new();
     public List<EmberLight> Lights { get; } = new();
     public List<ArtifactData> Artifacts { get; } = new();
@@ -56,6 +57,7 @@ public partial class RunManager : Node
     {
         ProcessMode = ProcessModeEnum.Always;
         SetupInput();
+        Visuals.Load();
         foreach(var file in ResourceLoader.ListDirectory("res://Resources/Dungeons"))
             if(file.EndsWith(".tres"))Dungeons.Add(ResourceLoader.Load<DungeonDefinition>("res://Resources/Dungeons/"+file));
         Dungeons.Sort((a,b)=>string.CompareOrdinal(a.ResourcePath,b.ResourcePath));
@@ -153,6 +155,7 @@ public partial class RunManager : Node
     }
     private void LoadStage()
     {
+        Hud.ClearBiomeIntro();
         if(IsInstanceValid(Room) && Room.GetParent()==_world) { _world.RemoveChild(Room);Room.QueueFree(); }
         if(IsInstanceValid(_transient) && _transient.GetParent()==_world) { _world.RemoveChild(_transient);_transient.QueueFree(); }
         Enemies.Clear();Player.ResetForRoom();Fx.ClearForRoom();Lights.Clear();Lights.Add(Player.Light);_fires.Clear();
@@ -168,6 +171,7 @@ public partial class RunManager : Node
         _roomRewardTaken=plan.Type==RoomType.Start;
         Room.Cleared=plan.Type is RoomType.Start or RoomType.RiskReward;
         Encounter=new EncounterController {Run=this,Plan=plan};Room.AddChild(Encounter);
+        if(plan.Type==RoomType.Start)Hud.ShowBiomeIntro();
         Hud.Toast(plan.Type switch
         {
             RoomType.Start => "WASD • FOLLOW YOUR LIGHT TO THE EASTERN GATE",

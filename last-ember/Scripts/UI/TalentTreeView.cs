@@ -9,6 +9,8 @@ public partial class TalentTreeView : Control
 {
     public IReadOnlyList<BuildUpgradeData> Catalog {get;set;}=Array.Empty<BuildUpgradeData>();
     public event Action<BuildUpgradeData>? Selected;
+    public event Action<BuildUpgradeData>? PlanToggled;
+    private readonly HashSet<string> _planned=new(StringComparer.Ordinal);
     private readonly Dictionary<string,Vector2> _positions=new(StringComparer.Ordinal);
     private readonly HashSet<string> _ancestry=new(StringComparer.Ordinal);
     private float _zoom=1;
@@ -16,6 +18,10 @@ public partial class TalentTreeView : Control
     private bool _dragging,_moved;
     private string _selected="",_search="",_hover="";
     public int MatchCount=>Catalog.Count(Matches);
+    public void SetPlan(IEnumerable<string> ids)
+    {
+        _planned.Clear();_planned.UnionWith(ids);QueueRedraw();
+    }
     public override void _Ready()
     {
         ClipContents=true;MouseFilter=MouseFilterEnum.Stop;
@@ -119,6 +125,8 @@ public partial class TalentTreeView : Control
                 else
                 {
                     if(_dragging&&!_moved&&button.ButtonIndex==MouseButton.Left&&Hit(button.Position) is {} data)SelectNode(data);
+                    if(_dragging&&!_moved&&button.ButtonIndex==MouseButton.Right&&Hit(button.Position) is {} planNode)
+                    {SelectNode(planNode);PlanToggled?.Invoke(planNode);}
                     _dragging=false;
                 }
                 AcceptEvent();
@@ -151,7 +159,8 @@ public partial class TalentTreeView : Control
             {
                 if(!_positions.TryGetValue(parent,out var origin))continue;
                 bool lit=_ancestry.Contains(data.Id)&&_ancestry.Contains(parent);
-                DrawLine(_pan+origin*_zoom,to,lit?Hud.Amber:new Color(.32f,.3f,.38f,.55f),lit?3:1.5f,true);
+                bool planned=_planned.Contains(data.Id)&&_planned.Contains(parent);
+                DrawLine(_pan+origin*_zoom,to,lit?Hud.Amber:planned?new Color(.45f,.9f,.68f):new Color(.32f,.3f,.38f,.55f),lit||planned?3:1.5f,true);
             }
         }
         foreach(var data in Catalog)
@@ -161,7 +170,9 @@ public partial class TalentTreeView : Control
             var tint=NodeColor(data);if(!Matches(data))tint=new Color(tint,.2f);
             bool active=data.Id==_selected||data.Id==_hover;
             if(active)DrawCircle(p,r+9,new Color(tint,.18f));
-            DrawCircle(p,r,new Color(.045f,.05f,.07f));
+            bool planned=_planned.Contains(data.Id);
+            DrawCircle(p,r,planned?new Color(.09f,.2f,.17f):new Color(.045f,.05f,.07f));
+            if(planned)DrawArc(p,r+4,0,Mathf.Tau,32,new Color(.45f,.9f,.68f),2,true);
             if(data.Synergy)
             {
                 var points=new[]{p+Vector2.Up*r,p+Vector2.Right*r,p+Vector2.Down*r,p+Vector2.Left*r,p+Vector2.Up*r};

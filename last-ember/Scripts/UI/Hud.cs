@@ -13,6 +13,18 @@ public partial class Hud : CanvasLayer
     private Label _flame=null!,_room=null!,_dash=null!,_reveal=null!,_relics=null!,_toast=null!,_bossName=null!,_prompt=null!;
     private ProgressBar _flameBar=null!,_dashBar=null!,_bossBar=null!;
     private float _toastTime;
+    private BiomeIntro? _biomeIntro;
+    public void ClearBiomeIntro()
+    {
+        if(GodotObject.IsInstanceValid(_biomeIntro)){_hud.RemoveChild(_biomeIntro!);_biomeIntro!.QueueFree();}
+        _biomeIntro=null;
+    }
+    public void ShowBiomeIntro()
+    {
+        ClearBiomeIntro();
+        _biomeIntro=new BiomeIntro {Run=Run,Title=Run.Dungeon.Definition.DisplayName,Subtitle=Run.Dungeon.Definition.Lesson};
+        _hud.AddChild(_biomeIntro);
+    }
     public bool CollectionOpen { get; private set; }
     public static readonly Color Amber=new(1,.62f,.28f), Cream=new(.94f,.89f,.79f), Muted=new(.57f,.56f,.56f);
     public override void _Ready()
@@ -92,6 +104,7 @@ public partial class Hud : CanvasLayer
     }
     public void ShowMenu()
     {
+        ClearBiomeIntro();
         _hud.Visible=false;var root=Overlay(true);
         Text(root,"A  S U N L E S S  R O G U E L I T E",new Rect2(145,182,800,40),22,Amber);
         Text(root,"LAST\nEMBER",new Rect2(134,250,890,335),134,Cream);
@@ -99,7 +112,7 @@ public partial class Hud : CanvasLayer
         Text(root,"The sun is gone. The fire is yours.\nSpend your light. Survive the descent.",new Rect2(145,655,740,95),28,Muted);
         Button(root,"START RUN     →",new Rect2(145,795,360,80),()=>Run.StartRun(),true,"StartRun");
         Button(root,"КОЛЛЕКЦИЯ",new Rect2(525,795,280,80),ShowCollection,false,"Collection");
-        Button(root,"AUDIO",new Rect2(825,795,180,80),ShowAudio,false,"AudioSettings");
+        Button(root,"SETTINGS",new Rect2(825,795,180,80),ShowAudio,false,"AudioSettings");
         Button(root,"QUIT",new Rect2(1100,915,380,45),()=>GetTree().Quit(),false,"Quit");
         Text(root,"WASD  MOVE    /    MOUSE  AIM    /    LMB  STRIKE\nSPACE  DASH    /    Q  ATTUNEMENT    /    E  USE    /    ESC  PAUSE",new Rect2(145,950,1000,65),18,Muted);
         for(int i=0;i<Run.Dungeons.Count;i++)
@@ -200,20 +213,24 @@ public partial class Hud : CanvasLayer
     public void ShowAudio()
     {
         var root=Overlay();
-        Text(root,"SOUND & SILENCE",new Rect2(500,220,1000,45),22,Amber);
-        Text(root,"Listen to your flame.",new Rect2(493,289,1150,95),62,Cream);
-        Text(root,"Music follows Flame, nearby danger and the light of the arena.\nLower a slider to zero to mute that channel.",new Rect2(500,405,1050,85),25,Muted);
-        AudioSlider(root,"MUSIC",new Vector2(500,575),Run.Music.Volume,Run.Music.SetVolume,"MusicVolume");
-        AudioSlider(root,"EFFECTS",new Vector2(500,670),Run.Audio.Volume,Run.Audio.SetVolume,"SfxVolume");
-        Button(root,"BACK",new Rect2(500,820,640,75),()=>{Run.Music.SaveSettings();ShowMenu();},true,"AudioBack");
+        Text(root,"ATMOSPHERE & SOUND",new Rect2(500,220,1000,45),22,Amber);
+        Text(root,"Shape the atmosphere.",new Rect2(493,289,1150,95),62,Cream);
+        Text(root,"Set the density of ash, snow and drifting embers.\nMusic follows your Flame and the danger around you.",new Rect2(500,405,1050,85),25,Muted);
+        AudioSlider(root,"MUSIC",new Vector2(500,535),Run.Music.Volume,Run.Music.SetVolume,"MusicVolume");
+        AudioSlider(root,"EFFECTS",new Vector2(500,610),Run.Audio.Volume,Run.Audio.SetVolume,"SfxVolume");
+        AudioSlider(root,"ATMOSPHERE",new Vector2(500,685),Run.Visuals.Atmosphere,Run.Visuals.SetAtmosphere,"AtmosphereDensity",Run.Visuals.Save);
+        var flicker=new CheckButton {Name="TorchFlicker",Text="TORCH FLICKER",Position=new Vector2(500,765),Size=new Vector2(640,48),ButtonPressed=Run.Visuals.TorchFlicker};
+        flicker.Toggled+=enabled=>{Run.Visuals.SetFlicker(enabled);Run.Visuals.Save();};root.AddChild(flicker);
+        Button(root,"BACK",new Rect2(500,860,640,75),()=>{Run.Music.SaveSettings();Run.Visuals.Save();ShowMenu();},true,"AudioBack");
     }
-    private void AudioSlider(Control parent,string title,Vector2 position,float value,Action<float> changed,string name)
+    private void AudioSlider(Control parent,string title,Vector2 position,float value,Action<float> changed,string name,Action? save=null)
     {
         var label=Text(parent,$"{title}   {value*100:0}%",new Rect2(position,new Vector2(220,38)),21,Muted);
         var slider=new HSlider {Name=name,Position=position+new Vector2(240,0),Size=new Vector2(400,38),MinValue=0,MaxValue=100,Step=1,Value=value*100,MouseDefaultCursorShape=Control.CursorShape.PointingHand};
         slider.ValueChanged+=next=>{changed((float)next/100);label.Text=$"{title}   {next:0}%";};
-        slider.DragEnded+=unused=>Run.Music.SaveSettings();
-        slider.FocusExited+=Run.Music.SaveSettings;
+        Action persist=save??Run.Music.SaveSettings;
+        slider.DragEnded+=unused=>persist();
+        slider.FocusExited+=persist;
         parent.AddChild(slider);
     }
     public void ShowEnd(bool victory)

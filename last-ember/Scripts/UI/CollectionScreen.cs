@@ -15,9 +15,11 @@ public partial class CollectionScreen : Control
     private readonly Button[] _tabs=new Button[3];
     private int _tab;
     private bool _switching;
+    private BuildPlan _plan=null!;
     private static readonly Color Surface=new(.055f,.061f,.079f);
     public override void _Ready()
     {
+        _plan=new BuildPlan(Run.Rewards);
         MouseFilter=MouseFilterEnum.Stop;SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(new ColorRect {Size=new Vector2(1920,1080),Color=new Color(.024f,.027f,.038f),MouseFilter=MouseFilterEnum.Ignore});
         Label(this,"КОЛЛЕКЦИЯ",new Rect2(70,55,1300,75),52,Hud.Cream);
@@ -35,7 +37,7 @@ public partial class CollectionScreen : Control
             if(_switching)return;
             if(_tree==null){Populate();return;}
             _tree.Search(_search.Text);
-            _count.Text=$"НАЙДЕНО {_tree.MatchCount} / {Run.Rewards.Catalog.Count}   •   Все таланты доступны";
+            UpdatePlanStatus();
             if(_tree.MatchCount==0)Empty();
         };
         _count=Label(this,"",new Rect2(75,972,1220,45),20,Hud.Muted);
@@ -130,18 +132,23 @@ public partial class CollectionScreen : Control
     private void ShowTree()
     {
         _tree=new TalentTreeView {Name="TalentTree",Size=new Vector2(1230,605),Catalog=Run.Rewards.Catalog};
-        _tree.Selected+=ShowTalent;_body.AddChild(_tree);
+        _tree.Selected+=ShowTalent;_tree.PlanToggled+=TogglePlan;_body.AddChild(_tree);
+        _tree.SetPlan(_plan.Upgrades.Select(item=>item.Id));
         MakeButton(_body,"−",new Rect2(0,623,60,48),()=>_tree.Zoom(1/1.2f),"TreeZoomOut");
         MakeButton(_body,"+",new Rect2(75,623,60,48),()=>_tree.Zoom(1.2f),"TreeZoomIn");
         MakeButton(_body,"ВСЁ ДЕРЕВО",new Rect2(150,623,240,48),()=>_tree.Fit(),"TreeFit");
-        Label(_body,"Колесо: масштаб • перетаскивание: карта • клик: описание",new Rect2(415,632,815,40),19,Hud.Muted);
-        _count.Text=$"{Run.Rewards.Catalog.Count} УЗЛОВ   •   Core: круги • гибриды: ромбы • все таланты доступны";
+        MakeButton(_body,"МОЙ ПЛАН",new Rect2(410,623,190,48),ShowPlan,"ViewBuildPlan");
+        Label(_body,"ЛКМ: описание • ПКМ: план • колесо: масштаб",new Rect2(625,632,605,40),18,Hud.Muted);
+        UpdatePlanStatus();
         var first=Run.Rewards.Catalog.FirstOrDefault(item=>item.Id=="melee_core")??Run.Rewards.Catalog.FirstOrDefault();
         if(first!=null)_tree.SelectNode(first);else Empty();
     }
     private void ShowTalent(BuildUpgradeData data)
     {
         var tint=TalentTreeView.NodeColor(data);var rows=Details(data.Category,data.DisplayName,tint);
+        RowButton(rows,_plan.Contains(data.Id)?"УБРАТЬ ИЗ ПЛАНА":"ДОБАВИТЬ В ПЛАН",()=>TogglePlan(data),"TogglePlannedTalent");
+        Paragraph(rows,_plan.Contains(data.Id)?"В ПЛАНЕ БИЛДА":"Зависимости добавляются вместе с талантом.",17,new Color(.5f,.86f,.68f));
+        if(!_plan.Saved)Paragraph(rows,_plan.Status,18,new Color(1,.55f,.35f));
         Paragraph(rows,data.Description);
         Paragraph(rows,"ТЕГИ",18,tint);Paragraph(rows,string.Join(" / ",data.Tags));
         Paragraph(rows,$"Максимальный ранг: {data.MaxRank}");
@@ -158,6 +165,36 @@ public partial class CollectionScreen : Control
         }
         var descendants=Run.Rewards.Catalog.Where(item=>item.RequiredIds.Contains(data.Id)).ToArray();
         if(descendants.Length>0){Paragraph(rows,"ОТКРЫВАЕТ ВЕТКИ",18,tint);Paragraph(rows,string.Join(" / ",descendants.Select(item=>item.DisplayName)));}
+    }
+    private void TogglePlan(BuildUpgradeData data)
+    {
+        if(_plan.Contains(data.Id))_plan.Remove(data.Id);else _plan.Add(data.Id);
+        _tree?.SetPlan(_plan.Upgrades.Select(item=>item.Id));UpdatePlanStatus();ShowTalent(data);
+    }
+    private void UpdatePlanStatus()
+    {
+        _count.Text=$"ПЛАН: {_plan.Upgrades.Count} УЗЛОВ   •   {_plan.Upgrades.Count(item=>item is CoreData)} CORES   •   {_plan.Upgrades.Count(item=>item.Synergy)} ГИБРИДОВ   •   "+(_plan.Saved?"СОХРАНЁН":"НЕ СОХРАНЁН");
+        if(_tree!=null&&_search.Text.Length>0)_count.Text+=$"   •   НАЙДЕНО {_tree.MatchCount}";
+    }
+    private void ShowPlan()
+    {
+        var rows=Details("ПЛАНИРОВЩИК БИЛДА","Мой план",new Color(.45f,.9f,.68f));
+        Paragraph(rows,$"{_plan.Upgrades.Count} узлов • {_plan.Upgrades.Count(item=>item is CoreData)} Cores • {_plan.Upgrades.Count(item=>item.Synergy)} гибридов",22);
+        Paragraph(rows,"Выбирайте узлы правой кнопкой мыши или через описание. Таланты добавляют свои зависимости; удаление Core убирает зависимые ветки.");
+        Paragraph(rows,"План сохраняется автоматически. В забеге получайте выбранные улучшения у святилищ.",18,Hud.Muted);
+        if(_plan.Status.Length>0)Paragraph(rows,_plan.Status,18,_plan.Saved?new Color(.5f,.86f,.68f):new Color(1,.55f,.35f));
+        RowButton(rows,"СОХРАНИТЬ ПЛАН",()=>{_plan.RetrySave();UpdatePlanStatus();ShowPlan();},"SaveBuildPlan");
+        var clear=RowButton(rows,"ОЧИСТИТЬ ПЛАН",()=>{_plan.Clear();_tree?.SetPlan(Array.Empty<string>());UpdatePlanStatus();ShowPlan();},"ClearBuildPlan");
+        clear.Disabled=_plan.Upgrades.Count==0;
+        foreach(var item in _plan.Upgrades.OrderBy(data=>data is CoreData?0:data.Synergy?1:data is SubCoreData?2:3).ThenBy(data=>data.DisplayName))
+            RowButton(rows,item.Category+" / "+item.DisplayName,()=>_tree?.SelectNode(item,true),"Planned"+item.Id);
+        if(_plan.Upgrades.Count==0)Paragraph(rows,"План пока пуст. Начните с Core или выберите интересный гибрид — оба нужных Core будут добавлены автоматически.");
+    }
+    private static Button RowButton(Control parent,string text,Action clicked,string name)
+    {
+        var button=new Button {Name=name,Text=text,CustomMinimumSize=new Vector2(0,48),MouseDefaultCursorShape=CursorShape.PointingHand,TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis};
+        button.AddThemeFontSizeOverride("font_size",20);button.AddThemeStyleboxOverride("normal",Box(new Color(.09f,.12f,.13f),new Color(.35f,.53f,.45f)));
+        button.Pressed+=clicked;parent.AddChild(button);return button;
     }
     private void Empty(){var rows=Details("ПОИСК","Ничего не найдено",Hud.Amber);Paragraph(rows,"Измените запрос или очистите поле поиска.");}
     private static void Paragraph(Control parent,string text,int fontSize=21,Color? tint=null)

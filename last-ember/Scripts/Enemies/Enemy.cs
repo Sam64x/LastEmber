@@ -2,7 +2,7 @@ using Godot;
 
 namespace LastEmber;
 
-public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss, Stalker, IceGuard, FireWisp }
+public enum EnemyKind { Ashling, Moth, Shade, Watcher, Leech, Torchbearer, Boss, Stalker, IceGuard, FireWisp, AshKnight, AshHunter, AshPriest }
 
 public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
 {
@@ -49,7 +49,8 @@ public partial class Enemy : CharacterBody2D, IDamageable, IDungeonReactive
     private float _heatGrace, _stagger;
     public void OpenWeakPoint(float seconds=.85f)=>WeakPointRemaining=Mathf.Max(WeakPointRemaining,seconds);
     public void ConsumeWeakPoint()=>WeakPointRemaining=0;
-    public void Stagger(float seconds){_stagger=Mathf.Max(_stagger,seconds);OpenWeakPoint(seconds);}
+    public void Stagger(float seconds){_stagger=Mathf.Max(_stagger,seconds);OpenWeakPoint(seconds);OnStaggered();}
+    protected virtual void OnStaggered() { }
     public void BreakArmor()
     {
         if(!IceArmored)return;IceArmored=false;

@@ -184,7 +184,8 @@ public partial class RunManager : Node
     }
     public Enemy Spawn(EnemyKind kind,Vector2 position)
     {
-        Enemy enemy=kind==EnemyKind.Boss?(Dungeon.Definition.Boss?.Instantiate<Enemy>() ?? new Extinguisher()):new Enemy {Kind=kind};
+        Enemy enemy=kind==EnemyKind.Boss?(Dungeon.Definition.Boss?.Instantiate<Enemy>() ?? new Extinguisher()):
+            kind is EnemyKind.AshKnight or EnemyKind.AshHunter or EnemyKind.AshPriest?new AshPilgrim {Kind=kind}:new Enemy {Kind=kind};
 
         enemy.Run=this;enemy.Position=position;Enemies.Add(enemy);_transient.AddChild(enemy);
         enemy.ContactDamage*=Mathf.Max(0,Dungeon.Definition.EnemyDamageMultiplier);

@@ -16,6 +16,7 @@ public partial class GroundAttackTelegraph : Node2D
     public List<Area> Areas { get; } = new();
     public List<Vector2> ShotDirections { get; } = new();
     public Vector2 ShotOrigin { get; set; }
+    public float ShotLength { get; set; } = 360;
     public Color Tint { get; set; } = new(1, .45f, .2f);
     public float Progress { get; set; }
     public override void _Ready()
@@ -47,7 +48,7 @@ public partial class GroundAttackTelegraph : Node2D
         }
         foreach (var direction in ShotDirections)
         {
-            var end = ShotOrigin + direction * 360;
+            var end = ShotOrigin + direction * ShotLength;
             DrawLine(ShotOrigin + direction * 48, end, new Color(Tint, .35f + Progress * .5f), 2 + Progress * 2, true);
             DrawLine(end, end - direction.Rotated(.5f) * 18, Tint, 2, true);
             DrawLine(end, end - direction.Rotated(-.5f) * 18, Tint, 2, true);

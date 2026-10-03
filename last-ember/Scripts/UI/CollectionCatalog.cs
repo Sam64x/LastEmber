@@ -7,6 +7,9 @@ public static class CollectionCatalog
 {
     public static readonly MonsterCard[] Monsters =
     {
+        new("ash_knight","Пепельный рыцарь",EnemyKind.AshKnight,120,"Паломник / ближний бой","Darkness","За 0.65 с готовит рубящий удар по зафиксированному сектору. После удара уязвим.","Уходите за спину или прерывайте подготовку оглушением. Отвечайте после взмаха.",new(.72f,.55f,.39f)),
+        new("ash_hunter","Пепельный охотник",EnemyKind.AshHunter,65,"Паломник / арбалетчик","Darkness","Держит дистанцию и за 0.85 с фиксирует направление выстрела. Снаряд останавливается стенами.","Шагните поперёк линии прицеливания, затем сближайтесь во время перезарядки.",new(.68f,.43f,.35f)),
+        new("ash_priest","Пепельный жрец",EnemyKind.AshPriest,80,"Паломник / контроль области","Darkness","Отмечает неподвижную печать радиусом 64 px и активирует её через 1.15 с.","Покиньте отмеченную область. Оглушение прерывает подготовку печати.",new(.65f,.48f,.53f)),
         new("ashling","Ashling",EnemyKind.Ashling,40,"Ближний бой","Все биомы / стаи","Преследует игрока и готовит короткий контактный удар.","Разделяйте стаю, используйте широкий Strike и урон по области.",new(.7f,.5f,.34f)),
         new("moth","Moth",EnemyKind.Moth,25,"Охотник на свет","Darkness","Просыпается от света. Любой Reveal слышен всем Moth в комнате и начинает преследование.","Перед Q приготовьте путь отхода. После импульса используйте Dash, чтобы не попасть в окружение.",new(.8f,.77f,.7f)),
         new("shade","Shade",EnemyKind.Shade,60,"Преследователь","Darkness","Движется быстрее в темноте и медленнее на свету. Его контактный удар на свету слабее.","Держите Shade в своём свете. Отступайте перед подготовленным ударом.",new(.65f,.48f,.86f)),
@@ -45,6 +48,13 @@ public partial class CollectionPortrait : Control
             DrawRect(new Rect2(c-new Vector2(r,r),new Vector2(r*2,r*2)),new Color(Tint,.15f));
             DrawPolyline(new[]{c+new Vector2(-r,r),c+new Vector2(-r,-r*.6f),c+new Vector2(0,-r*1.2f),c+new Vector2(r,-r*.6f),c+new Vector2(r,r)},Tint,4,true);
             DrawRect(new Rect2(c-new Vector2(r*.35f,-r*.1f),new Vector2(r*.7f,r)),Tint,false,3);
+        }
+        else if(Kind is EnemyKind.AshKnight or EnemyKind.AshHunter or EnemyKind.AshPriest)
+        {
+            var atlas=GD.Load<Texture2D>(PilgrimVisual.Asset(Kind));
+            float size=Mathf.Min(Size.X,Size.Y)*.95f;
+            var crop=new Vector2(1,PilgrimVisual.IdleBottom(Kind));
+            DrawTextureRectRegion(atlas,new Rect2(c-Vector2.One*size*.5f,Vector2.One*size*crop),new Rect2(Vector2.Zero,atlas.GetSize()/new Vector2(3,2)*crop));
         }
         else if(Kind==EnemyKind.Moth)
         {

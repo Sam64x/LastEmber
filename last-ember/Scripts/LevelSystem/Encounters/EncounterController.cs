@@ -85,6 +85,13 @@ public partial class EncounterController : Node
                 types.Count>0?types[i%types.Count]:EnemyKind.Shade;
             // Torchbearer is reserved for the authored elite beat, not ordinary roster rolls.
             if(kind==EnemyKind.Torchbearer)kind=EnemyKind.FireWisp;
+            // Teach one pilgrim role first; later large fights combine the trio.
+            if(Run.Dungeon.Definition.DungeonType==DungeonType.Darkness&&Plan.Encounter.Kind!=EncounterKind.Swarm)
+            {
+                if(i==0)kind=Plan.Type==RoomType.RiskReward?EnemyKind.AshHunter:Plan.Type==RoomType.Elite?EnemyKind.AshPriest:EnemyKind.AshKnight;
+                if(count>=5&&i==2)kind=EnemyKind.AshHunter;
+                if(count>=5&&i==4)kind=EnemyKind.AshPriest;
+            }
             Run.Spawn(kind,spawn.Value);
         }
     }

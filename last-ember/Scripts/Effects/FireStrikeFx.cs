@@ -17,6 +17,7 @@ public partial class FireStrikeFx : Node2D
     private readonly StrikeStyleData _basic=new();
     private int _slot=-1,_serial;
     private bool _charging;
+    private HeavyChargeFx _chargeFx=null!;
     private Vector2 _chargeAim;
     private float _charge,_chargeAge,_fullAge;
     private Stroke? Current=>_slot<0?null:_strokes[_slot];
@@ -53,11 +54,12 @@ public partial class FireStrikeFx : Node2D
     {
         ZIndex=18;Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
         for(int i=0;i<_layers.Length;i++){_layers[i]=new FlameSlashRibbon();AddChild(_layers[i]);}
+        _chargeFx=new HeavyChargeFx();AddChild(_chargeFx);
     }
     public void Begin(Vector2 aim,float strength)=>Begin(aim,strength,_basic,1,.065f,1,0);
     public void Begin(Vector2 aim,float strength,StrikeStyleData style,float size,float windup,float tempo,float charge)
     {
-        _charging=false;_slot=(_slot+1)%_strokes.Length;
+        StopCharge();_slot=(_slot+1)%_strokes.Length;
         var s=_strokes[_slot];s.Active=true;s.Released=false;s.Style=style;s.Aim=aim;s.Age=0;
         s.Power=Mathf.Clamp(strength,0,1);s.Size=size;s.Windup=Mathf.Max(.02f,windup);
         s.Sweep=Mathf.Max(.045f,style.SweepSeconds/Mathf.Sqrt(tempo));s.Tail=Mathf.Max(.09f,style.TailSeconds/Mathf.Sqrt(tempo));
@@ -71,14 +73,15 @@ public partial class FireStrikeFx : Node2D
     public void ShowCharge(Vector2 aim,float ratio)
     {
         if(!_charging){_chargeAge=0;_fullAge=0;}
-        _charging=true;_chargeAim=aim;_charge=ratio;QueueRedraw();
+        _charging=true;_chargeAim=aim;_charge=Mathf.Clamp(ratio,0,1);
+        _chargeFx.UpdateCharge(_chargeAim,_charge,_chargeAge,_fullAge,Blue);QueueRedraw();
     }
-    public void StopCharge(){_charging=false;_charge=0;QueueRedraw();}
+    public void StopCharge(){_charging=false;_charge=0;_chargeFx.Hide();QueueRedraw();}
     public void Clear(){foreach(var s in _strokes)s.Active=false;foreach(var layer in _layers)layer.Hide();StopCharge();QueueRedraw();}
     public override void _Process(double delta)
     {
         float dt=(float)delta;bool redraw=_charging;
-        if(_charging){_chargeAge+=dt;if(_charge>=1)_fullAge+=dt;}
+        if(_charging){_chargeAge+=dt;if(_charge>=1)_fullAge+=dt;_chargeFx.UpdateCharge(_chargeAim,_charge,_chargeAge,_fullAge,Blue);}
         foreach(var s in _strokes)
         {
             if(!s.Active)continue;redraw=true;s.Age+=dt;
@@ -118,27 +121,6 @@ public partial class FireStrikeFx : Node2D
                 DrawCircle(palm,3+ready*5,FlamePalette.Shift(new Color(1,.55f,.16f,.8f*ready),s.Blue));
                 continue;
             }
-        }
-        if(_charging)ChargeFilaments();
-    }
-    private void ChargeFilaments()
-    {
-        var center=_chargeAim*25;var fire=FlamePalette.Fire(Blue);
-        for(int i=0;i<6;i++)
-        {
-            float angle=i*Mathf.Tau/6+_chargeAge*(1+_charge);
-            var a=center+Vector2.FromAngle(angle)*(38-_charge*14);
-            var b=center+Vector2.FromAngle(angle+.35f)*13;
-            DrawLine(a,b,new Color(fire,.3f+_charge*.35f),1.4f+_charge,true);
-        }
-        DrawCircle(center,3+_charge*6,new Color(fire,.65f));
-        DrawCircle(center,2+_charge*3,new Color(1,1,1,.4f+_charge*.4f));
-        DrawArc(Vector2.Zero,31,-Mathf.Pi/2,-Mathf.Pi/2+Mathf.Tau*Mathf.Max(.01f,_charge),48,new Color(fire,.65f),2,true);
-        if(_charge>=1)
-        {
-            float flash=Mathf.Clamp(1-_fullAge/.18f,0,1);
-            DrawArc(center,12+(1-flash)*18,0,Mathf.Tau,40,new Color(1,1,1,flash*.7f),2,true);
-            DrawLine(center-new Vector2(0,9),center+new Vector2(0,9),new Color(1,1,1,.6f),1.5f,true);
         }
     }
     public override void _ExitTree()=>_basic.Dispose();

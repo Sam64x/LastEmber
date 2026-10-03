@@ -1,18 +1,21 @@
 using Godot;
 namespace LastEmber;
 
-// Six authored poses with procedural breathing, recoil and grounded locomotion.
+// Knight uses articulated armor; hunter and priest retain the six-pose atlas.
 public partial class PilgrimVisual : Node2D
 {
     public EnemyKind Kind {get;set;}=EnemyKind.AshKnight;
     private Texture2D _atlas=null!;
     private ShaderMaterial _material=null!;
+    private KnightRigVisual? _rig;
+    public event System.Action? FootPlanted;
     private float _time,_gait,_speed,_windup,_release=10,_hurt,_death=-1;
     private Vector2 _facing=Vector2.Right;
     public static float IdleBottom(EnemyKind kind)=>kind==EnemyKind.AshKnight?.89f:kind==EnemyKind.AshHunter?.985f:.95f;
     public static string Asset(EnemyKind kind)=>"res://Assets/Enemies/ash-"+(kind==EnemyKind.AshHunter?"hunter":kind==EnemyKind.AshPriest?"priest":"knight")+"-atlas-v1.png";
     public override void _Ready()
     {
+        if(Kind==EnemyKind.AshKnight){_rig=new KnightRigVisual();_rig.FootPlanted+=()=>FootPlanted?.Invoke();AddChild(_rig);return;}
         _atlas=GD.Load<Texture2D>(Asset(Kind));
         _material=new ShaderMaterial {Shader=GD.Load<Shader>("res://Assets/Shaders/pilgrim_pose.gdshader")};
         Material=_material;TextureFilter=TextureFilterEnum.Linear;
@@ -24,11 +27,14 @@ public partial class PilgrimVisual : Node2D
     {
         _speed=velocity.Length();if(facing.LengthSquared()>.01f)_facing=facing;
         _windup=windup;_release=releaseAge;_hurt=hurt;
+        _rig?.UpdatePose(velocity,facing,windup,releaseAge,hurt);
     }
-    public void Die(){_death=0;_speed=0;_windup=0;ZIndex=7;}
+    public void ReactToHit(Vector2 direction)=>_rig?.ReactToHit(direction);
+    public void Die(){_death=0;_speed=0;_windup=0;ZIndex=7;_rig?.Die();}
     public override void _Process(double delta)=>Advance((float)delta);
     public void Advance(float dt)
     {
+        if(_rig!=null){_rig.Advance(dt);if(_death>=0){_death+=dt;if(_death>.68f)QueueFree();}return;}
         _time+=dt;_gait+=_speed*dt/38;
         float a=0,b=0,blend=0;
         if(_speed>8){a=1;b=2;blend=(Mathf.Sin(_gait*Mathf.Pi)+1)*.5f;blend=Mathf.SmoothStep(.2f,.8f,blend);}
@@ -48,9 +54,10 @@ public partial class PilgrimVisual : Node2D
     }
     public override void _Draw()
     {
+        if(_rig!=null)return;
         float size=Kind==EnemyKind.AshKnight?112:104;
         float anchor=Kind==EnemyKind.AshKnight?.9f:Kind==EnemyKind.AshHunter?.965f:.945f;
         DrawTextureRect(_atlas,new Rect2(-size*.5f,-size*anchor,size,size),false);
     }
-    public override void _ExitTree()=>_material.Dispose();
+    public override void _ExitTree()=>_material?.Dispose();
 }

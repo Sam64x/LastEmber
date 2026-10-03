@@ -9,6 +9,7 @@ public partial class AshPilgrim : Enemy
     private Vector2 _aim=Vector2.Right,_waypoint;
     private float _releaseAge=10,_pathClock,_footstep;
     private float Windup=>Kind==EnemyKind.AshKnight?.65f:Kind==EnemyKind.AshHunter?.85f:1.15f;
+    private float Recovery=>Kind==EnemyKind.AshKnight?.48f:.4f;
     public override void _Ready()
     {
         MaxHealth=Kind==EnemyKind.AshKnight?120:Kind==EnemyKind.AshHunter?65:80;
@@ -17,12 +18,13 @@ public partial class AshPilgrim : Enemy
         base._Ready();
         Material=new CanvasItemMaterial {LightMode=CanvasItemMaterial.LightModeEnum.Unshaded};
         _visual=new PilgrimVisual {Kind=Kind};AddChild(_visual);
+        _visual.FootPlanted+=()=>{if(Run.Playing&&!Dead)Run.Audio.PlayAt("heavy_step",Position,.45f);};
         _warning=new GroundAttackTelegraph {Tint=new Color(.95f,.27f,.16f),ShotLength=520};AddChild(_warning);
         _slash=new FlameSlashRibbon();AddChild(_slash);
     }
     protected override void OnStaggered()
     {
-        Telegraph=0;_releaseAge=Mathf.Max(_releaseAge,.4f);Cooldown=Mathf.Max(Cooldown,.8f);_warning?.Clear();
+        Telegraph=0;_releaseAge=Mathf.Max(_releaseAge,1);Cooldown=Mathf.Max(Cooldown,.8f);_warning?.Clear();
     }
     protected override void Behave(float dt)
     {
@@ -36,7 +38,7 @@ public partial class AshPilgrim : Enemy
             _warning.Progress=1-Telegraph/Windup;_warning.ShotOrigin=Position;_warning.QueueRedraw();
             if(Telegraph<=0){ReleaseAttack();_warning.Clear();}
         }
-        else if(_releaseAge<.4f)direction=Vector2.Zero;
+        else if(_releaseAge<Recovery)direction=Vector2.Zero;
         else
         {
             _aim=direction;
@@ -65,7 +67,7 @@ public partial class AshPilgrim : Enemy
             direction=Run.Room.Steer(Position,direction,BodyRadius);
         }
         Vector2 separation=Vector2.Zero;
-        if(Telegraph<=0&&_releaseAge>=.4f)foreach(var other in Run.Enemies)
+        if(Telegraph<=0&&_releaseAge>=Recovery)foreach(var other in Run.Enemies)
         {
             if(other==this||other.Dead)continue;var away=Position-other.Position;
             float minimum=BodyRadius+other.BodyRadius+6;
@@ -73,7 +75,7 @@ public partial class AshPilgrim : Enemy
         }
         Velocity=direction*SpeedNow+Knockback+separation;Knockback=Knockback.MoveToward(Vector2.Zero,dt*700);MoveAndSlide();
         var bounds=Run.Room.Bounds.Grow(-BodyRadius);Position=Position.Clamp(bounds.Position,bounds.End);
-        _footstep-=dt;if(Velocity.LengthSquared()>900&&_footstep<=0){_footstep=Kind==EnemyKind.AshKnight?.68f:.48f;Run.Audio.PlayAt(Kind==EnemyKind.AshKnight?"heavy_step":"step",Position,.45f);}
+        _footstep-=dt;if(Kind!=EnemyKind.AshKnight&&Velocity.LengthSquared()>900&&_footstep<=0){_footstep=.48f;Run.Audio.PlayAt("step",Position,.45f);}
     }
     private void ReleaseAttack()
     {
@@ -108,7 +110,7 @@ public partial class AshPilgrim : Enemy
     }
     public override void TakeDamage(DamageInfo hit)
     {
-        if(Dead)return;base.TakeDamage(hit);
+        if(Dead)return;_visual.ReactToHit(Position-hit.Origin);base.TakeDamage(hit);
         if(!Dead)return;_warning.Clear();_visual.Reparent(Run.Room,true);_visual.Die();
     }
     public override void _Draw()

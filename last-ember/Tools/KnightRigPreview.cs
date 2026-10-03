@@ -9,8 +9,8 @@ public partial class KnightRigPreview : Node2D
         var viewport=new SubViewport {Size=new Vector2I(1050,640),RenderTargetUpdateMode=SubViewport.UpdateMode.Always};AddChild(viewport);
         viewport.AddChild(new ColorRect {Size=new Vector2(1050,640),Color=new Color(.045f,.048f,.055f)});
         void Label(string text,Vector2 pos,int size=18){var label=new Label {Text=text,Position=pos};label.AddThemeFontSizeOverride("font_size",size);viewport.AddChild(label);}
-        Label("ASH KNIGHT / CONTINUOUS JOINT ANIMATION",new Vector2(24,18),25);
-        Label("BEFORE / SIX POSES",new Vector2(24,80));Label("AFTER / ARTICULATED",new Vector2(374,80));Label("GAMEPLAY SCALE / 1x",new Vector2(740,80));
+        Label("ASH KNIGHT / COHESIVE SILHOUETTE / V3",new Vector2(24,18),25);
+        Label("ORIGINAL DESIGN",new Vector2(24,65));Label("REBUILT / V3",new Vector2(374,65));Label("GAMEPLAY SCALE / 1x",new Vector2(740,65));
         var legacyHolder=new Node2D {Position=new Vector2(170,425),Scale=Vector2.One*2.8f};viewport.AddChild(legacyHolder);
         var atlas=GD.Load<Texture2D>(PilgrimVisual.Asset(EnemyKind.AshKnight));
         var legacyMaterial=new ShaderMaterial {Shader=GD.Load<Shader>("res://Assets/Shaders/pilgrim_pose.gdshader")};
@@ -23,10 +23,10 @@ public partial class KnightRigPreview : Node2D
             rigs[i]=new PilgrimVisual {Kind=EnemyKind.AshKnight,ProcessMode=ProcessModeEnum.Disabled};holder.AddChild(rigs[i]);
         }
         var state=new Label {Position=new Vector2(24,450)};state.AddThemeFontSizeOverride("font_size",22);viewport.AddChild(state);
-        Label("Rigid armor joints / planted gait / cloth inertia / front and rear",new Vector2(24,500),17);
+        Label("Continuous body / connected limbs / restrained movement",new Vector2(24,500),17);
         Label("No slash VFX: the movement must read on its own",new Vector2(24,530),17);
         Label("Isolated production rig / 60fps / no gameplay simulation",new Vector2(24,600),15);
-        string output=ProjectSettings.GlobalizePath("res://../.tools/knight-rig-preview");DirAccess.MakeDirRecursiveAbsolute(output);
+        string output=ProjectSettings.GlobalizePath("res://../.tools/knight-v3-preview");DirAccess.MakeDirRecursiveAbsolute(output);
         float gait=0;
         for(int frame=0;frame<540;frame++)
         {
